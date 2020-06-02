@@ -29,8 +29,10 @@ void findcollisions(uint32_t hash, int length, std::string perm_list)
             for (int j = 0; j < perm_list.size(); j++)
             {
                 str[i] = perm_list[j];
-                uint32_t resulthash = updateCrc32String(hashbase, &str[i], sizeof(str[i]));
-                std::cout << str << " 0x" << std::hex << hashbase << " 0x" << resulthash << std::endl;
+                uint32_t resulthash = updateCrc32String(hashbase, &str[i], 1);
+
+                if (resulthash == hash)
+                    std::cout << str << " 0x" << std::hex << hashbase << " 0x" << resulthash << std::endl;
             }
             
             bool next = false;
@@ -63,9 +65,11 @@ void findcollisions(uint32_t hash, int length, std::string perm_list)
     }
 }
 
+/**/
+
 int main(int argc, char *argv[])
 {
-    findcollisions(0, 4, "ABCDEFGHIJKLMNOPQRTUVWXYZ");
+    findcollisions(0xDE4B237D, 16, "ABCDEFGHIJKLMNOPQRTUVWXYZ");
     
 
     return 0;    
