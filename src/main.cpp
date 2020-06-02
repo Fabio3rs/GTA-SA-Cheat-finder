@@ -30,7 +30,7 @@ void findcollisions(uint32_t hash, int length, std::string perm_list)
             {
                 str[i] = perm_list[j];
                 uint32_t resulthash = updateCrc32String(hashbase, &str[i], sizeof(str[i]));
-                std::cout << str << " 0x" << std::hex << hashbase << " 0x" << std::endl;
+                std::cout << str << " 0x" << std::hex << hashbase << " 0x" << resulthash << std::endl;
             }
             
             bool next = false;
