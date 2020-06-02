@@ -9,11 +9,14 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 */
 // Original: https://github.com/cleolibrary/CLEO4/blob/master/source/crc32.h
 #pragma once
+#include <cstdint>
 #include <string>
 
-unsigned long crc32(const unsigned char *buf, unsigned long len);
-unsigned long updateCrc32(unsigned long crc, const unsigned char *buf, unsigned long len);
-unsigned long crc32FromUpcaseString (const char *str);
-unsigned long crc32FromUpcaseStdString (const std::string& str);
-unsigned long crc32FromString (const char *str);
-unsigned long crc32FromStdString (const std::string& str);
+uint32_t crc32(const unsigned char *buf, uint32_t len);
+uint32_t updateCrc32(uint32_t crc, const unsigned char *buf, uint32_t len);
+uint32_t updateCrc32String(uint32_t crc, const char *buf, uint32_t len);
+uint32_t crc32FromUpcaseString (const char *str);
+uint32_t crc32FromUpcaseStdString (const std::string& str);
+uint32_t crc32FromString (const char *str);
+uint32_t crc32FromStringLen(const char *str, uint32_t len);
+uint32_t crc32FromStdString (const std::string& str);

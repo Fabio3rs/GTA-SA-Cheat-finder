@@ -11,7 +11,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include "crc32.h"
 #include <ctype.h>
 
-static const unsigned long crcTable[256] = {
+static const uint32_t crcTable[256] = {
 	0x00000000UL, 0x77073096UL, 0xee0e612cUL, 0x990951baUL, 0x076dc419UL,
 	0x706af48fUL, 0xe963a535UL, 0x9e6495a3UL, 0x0edb8832UL, 0x79dcb8a4UL,
 	0xe0d5e91eUL, 0x97d2d988UL, 0x09b64c2bUL, 0x7eb17cbdUL, 0xe7b82d07UL,
@@ -66,43 +66,59 @@ static const unsigned long crcTable[256] = {
 	0x2d02ef8dUL
 };
 
-unsigned long crc32FromUpcaseString (const char *str) 
+uint32_t crc32FromUpcaseString (const char *str) 
 {
-	unsigned long crc = 0xFFFFFFFF;
+	uint32_t crc = 0xFFFFFFFF;
 	while (*str) 
 		crc = crcTable[(crc^toupper(*str++))&0xff]^(crc >> 8);
 	return crc;
 }
 
-unsigned long crc32FromUpcaseStdString(const std::string& str)
+uint32_t crc32FromUpcaseStdString(const std::string& str)
 {
 	return crc32FromUpcaseString(str.c_str());
 }
 
-unsigned long crc32FromString (const char *str) 
+uint32_t crc32FromString (const char *str) 
 {
-	unsigned long crc = 0xFFFFFFFF;
+	uint32_t crc = 0xFFFFFFFF;
 	while (*str) 
 		crc = crcTable[(crc^(*str++))&0xff]^(crc >> 8);
 	return crc;
 }
 
-unsigned long crc32FromStdString(const std::string& str)
+uint32_t crc32FromStringLen(const char *str, uint32_t len)
+{
+	uint32_t crc = 0xFFFFFFFF;
+	for (unsigned i = 0; i < len; i++)
+		crc = crcTable[(crc^str[i]) & 0xFF] ^ (crc >> 8);
+	return crc;
+}
+
+uint32_t crc32FromStdString(const std::string& str)
 {
 	return crc32FromString(str.c_str());
 }
 
-unsigned long crc32(const unsigned char *buf, unsigned long len)
+uint32_t crc32(const unsigned char *buf, uint32_t len)
 {
-	unsigned long crc = 0xFFFFFFFF;
+	uint32_t crc = 0xFFFFFFFF;
 	for (unsigned i = 0; i < len; i++)
 		crc = crcTable[(crc^buf[i]) & 0xFF] ^ (crc >> 8);
 	return crc;
 }
 
-unsigned long updateCrc32(unsigned long crc, const unsigned char *buf, unsigned long len)
+uint32_t updateCrc32(uint32_t crc, const unsigned char *buf, uint32_t len)
 {
 	for (unsigned i = 0; i < len; i++)
 		crc = crcTable[(crc^buf[i]) & 0xFF] ^ (crc >> 8);
 	return crc;
 }
+
+uint32_t updateCrc32String(uint32_t crc, const char *str, uint32_t len)
+{
+	for (unsigned i = 0; i < len; i++)
+		crc = crcTable[(crc^str[i]) & 0xFF] ^ (crc >> 8);
+	return crc;
+}
+
