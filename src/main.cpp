@@ -16,7 +16,6 @@ void findcollisions(uint32_t hash, int length, std::string perm_list)
     std::sort(perm_list.begin(), perm_list.end());
     std::cout << "Permutation list " << perm_list << std::endl;
     int ppos = 0;
-    int end = perm_list[perm_list.size() - 1];
 
     for (int i = 1; i < length; i++)
     {
@@ -25,10 +24,13 @@ void findcollisions(uint32_t hash, int length, std::string perm_list)
 
         while (true)
         {
+            uint32_t hashbase = crc32FromStringLen(str, i);
+            
             for (int j = 0; j < perm_list.size(); j++)
             {
                 str[i] = perm_list[j];
-                std::cout << str << std::endl;
+                uint32_t resulthash = updateCrc32String(hashbase, &str[i], sizeof(str[i]));
+                std::cout << str << " 0x" << std::hex << hashbase << " 0x" << std::endl;
             }
             
             bool next = false;
@@ -59,27 +61,6 @@ void findcollisions(uint32_t hash, int length, std::string perm_list)
                 break;
         }
     }
-
-    /*for (int i = 1; i < length; i++)
-    {
-        for (int j = 0; j < i; j++)
-            str[j] = perm_list[0];
-
-        for (int l = i - 1; l >= 0; l--)
-        {
-            for (int p = 1; p < perm_list.size(); p++)
-            {
-                std::cout << "l " << l << std::endl;
-                for (int j = 0; j < perm_list.size(); j++)
-                {
-                    str[i] = perm_list[j];
-                    std::cout << str << std::endl;
-                }
-
-                str[l] = perm_list[p];
-            }
-        }
-    }*/
 }
 
 int main(int argc, char *argv[])
