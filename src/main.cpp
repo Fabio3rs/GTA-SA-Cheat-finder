@@ -1,3 +1,6 @@
+// (c) 2020 Fabio R. Sluzala
+// This code is licensed under MIT license (see LICENSE for details)
+// Inspired on LINK/2012 GTA SA cheat finder
 #include <iostream>
 #include <array>
 #include <vector>
