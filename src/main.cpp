@@ -106,7 +106,7 @@ void findcollisions_mthread(uint32_t hash, int length, std::string perm_list, ui
             
             for (int j = 0; j < perm_list.size(); j++)
             {
-                uint32_t resulthash = updateCrc32String(hashbase, &perm_list[j], 1);
+                uint32_t resulthash = updateCrc32Char(hashbase, perm_list[j]);
 
                 if (resulthash == hash)
                 {
