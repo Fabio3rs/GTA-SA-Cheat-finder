@@ -276,6 +276,14 @@ void io_thread(std::chrono::time_point<std::chrono::high_resolution_clock> start
 
 int main(int argc, char *argv[])
 {
+    int max_length = 16;
+
+    if (argc > 1)
+    {
+        std::cout << "max_length = 6" << std::endl;
+        max_length = 6;
+    }
+
     iothreadShouldContinue = true;
 
     io_collisions.reserve(16);
