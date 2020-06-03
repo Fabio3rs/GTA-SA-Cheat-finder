@@ -108,6 +108,13 @@ uint32_t crc32(const unsigned char *buf, uint32_t len)
 	return crc;
 }
 
+uint32_t crc32Char(char ch)
+{
+	uint32_t crc = 0xFFFFFFFF;
+	crc = crcTable[(crc^ch) & 0xFF] ^ (crc >> 8);
+	return crc;
+}
+
 uint32_t updateCrc32(uint32_t crc, const unsigned char *buf, uint32_t len)
 {
 	for (unsigned i = 0; i < len; i++)
