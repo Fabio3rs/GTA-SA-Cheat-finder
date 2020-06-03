@@ -131,11 +131,6 @@ void findcollisions_mthread(uint32_t hash, int length, std::string perm_list, ui
 
                 auto it = std::find(perm_list.begin(), perm_list.end(), str[l]);
 
-                if (it == perm_list.end())
-                {
-                    std::cout << "error";
-                }
-
                 ++it;
 
                 if (it != perm_list.end())
