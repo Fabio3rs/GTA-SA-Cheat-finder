@@ -298,7 +298,7 @@ int main(int argc, char *argv[])
     std::cout << "TIME          THREAD            STRING" << std::endl;
     for (int i = 0; i < threads; i++)
     {
-        thrds.push_back(std::thread(findcollisions_mthread, 0xDE4B237D, 16, "ABCDEFGHIJKLMNOPQRTUVWXYZ", i + 1));
+        thrds.push_back(std::thread(findcollisions_mthread, 0xDE4B237D, max_length, "ABCDEFGHIJKLMNOPQRTUVWXYZ", i + 1));
     }
 
     //findcollisions(0xDE4B237D, 16, "ABCDEFGHIJKLMNOPQRTUVWXYZ");
