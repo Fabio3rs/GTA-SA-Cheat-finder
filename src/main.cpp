@@ -43,7 +43,9 @@ void register_collision(uint32_t hash, std::chrono::time_point<std::chrono::high
     col.hash = hash;
     col.when = when;
     col.thread_id = id;
-    strncpy(col.str, str, strsize > sizeof(col.str)? (sizeof(col.str) - 1) : strsize);
+    int size = strsize > sizeof(col.str)? (sizeof(col.str) - 1) : strsize;
+    strncpy(col.str, str, size);
+    col.str[size] = 0;
 }
 
 struct permdata
@@ -135,6 +137,7 @@ void findcollisions_mthread(uint32_t hash, int length, std::string perm_list, ui
                 if (l == 0)
                 {
                     pd = assignthreadnewperm(i, 0, perm_list);
+                    i = pd.len;
                     break;
                 }
 
@@ -280,8 +283,8 @@ int main(int argc, char *argv[])
 
     if (argc > 1)
     {
-        std::cout << "max_length = 6" << std::endl;
-        max_length = 6;
+        max_length = 7;
+        std::cout << "max_length = " << max_length << std::endl;
     }
 
     iothreadShouldContinue = true;
