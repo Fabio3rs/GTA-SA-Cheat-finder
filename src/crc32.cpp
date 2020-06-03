@@ -122,3 +122,9 @@ uint32_t updateCrc32String(uint32_t crc, const char *str, uint32_t len)
 	return crc;
 }
 
+uint32_t updateCrc32Char(uint32_t crc, const char ch)
+{
+	crc = crcTable[(crc^ch) & 0xFF] ^ (crc >> 8);
+	return crc;
+}
+

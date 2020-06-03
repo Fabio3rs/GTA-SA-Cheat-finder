@@ -14,6 +14,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 uint32_t crc32(const unsigned char *buf, uint32_t len);
 uint32_t updateCrc32(uint32_t crc, const unsigned char *buf, uint32_t len);
+uint32_t updateCrc32Char(uint32_t crc, const char ch);
 uint32_t updateCrc32String(uint32_t crc, const char *buf, uint32_t len);
 uint32_t crc32FromUpcaseString (const char *str);
 uint32_t crc32FromUpcaseStdString (const std::string& str);
