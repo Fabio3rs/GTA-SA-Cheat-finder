@@ -84,7 +84,10 @@ void findcollisions_mthread(uint32_t hash, int length, std::string perm_list, ui
     if (perm_list.size() == 0)
         return;
 
-    std::array<uint32_t, 64> hashbylen;
+    if (length > 127)
+        length = 127;
+
+    std::array<uint32_t, 128> hashbylen;
     char str[128] = { 0 };
 
     std::sort(perm_list.begin(), perm_list.end());
@@ -95,14 +98,20 @@ void findcollisions_mthread(uint32_t hash, int length, std::string perm_list, ui
     {
         i = pd.len;
 
-        for (int j = 0; j < i; j++)
-            str[j] = perm_list[0];
-        
         str[0] = perm_list[pd.perm];
+        hashbylen[0] = crc32Char(perm_list[pd.perm]);
+
+        for (int j = 1; j < i; j++)
+        {
+            str[j] = perm_list[0];
+            hashbylen[j] = updateCrc32Char(hashbylen[j - 1], perm_list[0]);
+        }
+
+        int imone = i - 1;
 
         while (true)
         {
-            uint32_t hashbase = crc32FromStringLen(str, i);
+            uint32_t hashbase = hashbylen[imone]/*crc32FromStringLen(str, i)*/;
             
             for (int j = 0; j < perm_list.size(); j++)
             {
@@ -136,9 +145,13 @@ void findcollisions_mthread(uint32_t hash, int length, std::string perm_list, ui
                 if (it != perm_list.end())
                 {
                     str[l] = *it;
+                    hashbylen[l] = updateCrc32Char(hashbylen[l - 1], *it);
 
                     for (int j = l + 1; j < i; j++)
+                    {
                         str[j] = perm_list[0];
+                        hashbylen[j] = updateCrc32Char(hashbylen[j - 1], perm_list[0]);
+                    }
                     
                     next = true;
                     break;
