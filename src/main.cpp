@@ -239,7 +239,7 @@ void io_thread(std::chrono::time_point<std::chrono::high_resolution_clock> start
 
     while (iothreadShouldContinue)
     {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        std::this_thread::sleep_for(std::chrono::milliseconds(1500));
         
         {
             std::lock_guard<std::mutex> lck(printmutex);
@@ -261,7 +261,10 @@ void io_thread(std::chrono::time_point<std::chrono::high_resolution_clock> start
                     buffer += temp;
 
                     buffer.append(32 - temp.size(), ' ');
-                    buffer += io.str;
+
+                    temp = io.str;
+                    std::reverse(temp.begin(), temp.end());
+                    buffer += temp;
                     buffer += "\n";
                 }
 
