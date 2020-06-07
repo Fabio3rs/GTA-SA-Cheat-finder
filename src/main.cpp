@@ -282,7 +282,7 @@ void io_thread(std::chrono::time_point<std::chrono::high_resolution_clock> start
 
 int main(int argc, char *argv[])
 {
-    int max_length = 16;
+    int max_length = 30;
 
     if (argc > 1)
     {
@@ -292,7 +292,7 @@ int main(int argc, char *argv[])
 
     iothreadShouldContinue = true;
 
-    io_collisions.reserve(16);
+    io_collisions.reserve(64);
 
     int threads = std::thread::hardware_concurrency();
     std::vector<std::thread> thrds;
