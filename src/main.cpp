@@ -124,12 +124,12 @@ void findcollisions_mthread(uint32_t hash, int length, const std::string &perm_l
     struct optliststruct
     {
         int pos;
-        int size;
+        int end;
 
         optliststruct()
         {
             pos = -1;
-            size = 0;
+            end = 0;
         }
     };
 
@@ -143,9 +143,9 @@ void findcollisions_mthread(uint32_t hash, int length, const std::string &perm_l
             tblvec.push_back({});
         }
 
-        std::lock_guard<std::mutex> lck(printmutex);
+        /*std::lock_guard<std::mutex> lck(printmutex);
         std::cout << std::hex << "BASE: " << cheatTable[0] << " MAX " << cheatTable[cheatTable.size() - 1] << " DIFF "
-            << DIFF << "  " << DIVISOR << std::endl;
+            << DIFF << "  " << DIVISOR << std::endl;*/
 
         int handle = 0;
 
@@ -158,9 +158,10 @@ void findcollisions_mthread(uint32_t hash, int length, const std::string &perm_l
             if (op.pos == -1)
             {
                 op.pos = i;
+                op.end = i;
             }
             
-            op.size++;
+            op.end++;
 
             hashr[handle] |= cheatTable[i];
 
@@ -218,7 +219,7 @@ void findcollisions_mthread(uint32_t hash, int length, const std::string &perm_l
 
                         if (tblvec[B].pos != -1)
                         {
-                            for (int dc = tblvec[B].pos, siz = dc + tblvec[B].size; dc < siz; dc++)
+                            for (int dc = tblvec[B].pos, end = tblvec[B].end; dc != end; dc++)
                             {
                                 if (cheatTable[dc] == resulthash)
                                 {
