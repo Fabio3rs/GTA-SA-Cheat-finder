@@ -111,6 +111,40 @@ void findcollisions_mthread(uint32_t hash, int length, const std::string &perm_l
 
     std::sort(cheatTable.begin(), cheatTable.end());
 
+    std::array<uint32_t, 8> hashr;
+    
+    std::fill(hashr.begin(), hashr.end(), 0u);
+    const int CSIZE = (cheatTable.size() + hashr.size() / 2) / hashr.size();
+
+    const uint32_t LAST = cheatTable[cheatTable.size() - 1];
+    const uint32_t DIFF = (LAST - cheatTable[0]);
+    const uint32_t START = cheatTable[0], DIVISOR = (DIFF / cheatTable.size());
+    const uint32_t OPTSIZE = LAST / DIVISOR + 1;
+    
+    {
+        std::lock_guard<std::mutex> lck(printmutex);
+        std::cout << std::hex << "BASE: " << cheatTable[0] << " MAX " << cheatTable[cheatTable.size() - 1] << " DIFF "
+            << DIFF << "  " << DIVISOR << std::endl;
+
+        for (auto hsh : cheatTable)
+        {
+            uint32_t BASE = hsh - START;
+            std::cout << BASE << " index: " << BASE / DIVISOR << std::endl;
+        }
+
+        int handle = 0;
+
+        for (int i = 0, size = cheatTable.size(); i < size; i++)
+        {
+            hashr[handle] |= cheatTable[i];
+
+            if (i != 0 && i % CSIZE == 0)
+            {
+                ++handle;
+            }
+        }
+    }
+
     std::array<uint32_t, 32> hashbylen;
     char str[32] = { 0 };
 
@@ -150,7 +184,37 @@ void findcollisions_mthread(uint32_t hash, int length, const std::string &perm_l
 
                 if ((hashtotal & resulthash) == resulthash && resulthash >= cheatTable[0] && resulthash <= cheatTable[cheatTable.size() - 1])
                 {
-                    if (std::find(cheatTable.begin(), cheatTable.end(), resulthash) != cheatTable.end())
+                    bool findval = false;
+                    
+                    auto it = cheatTable.begin();
+                    auto itend = cheatTable.begin();
+                    std::advance(itend, CSIZE);
+                    for (int hi = 0; hi < hashr.size(); hi++)
+                    {
+                        if (resulthash < *it)
+                        {
+                            break;
+                        }
+                        
+                        if ((hashr[hi] & resulthash) == resulthash)
+                        {
+                            if (hi == hashr.size() - 1)
+                            {
+                                itend = cheatTable.end();
+                            }
+
+                            if (std::find(it, itend, resulthash) != itend)
+                            {
+                                findval = true;
+                                break;
+                            }
+                        }
+
+                        std::advance(it, CSIZE);
+                        std::advance(itend, CSIZE);
+                    }
+
+                    if (findval)
                     //if (resulthash == hash)
                     {
                         // complete the string
