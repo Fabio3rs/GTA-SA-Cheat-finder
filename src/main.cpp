@@ -120,22 +120,48 @@ void findcollisions_mthread(uint32_t hash, int length, const std::string &perm_l
     const uint32_t DIFF = (LAST - cheatTable[0]);
     const uint32_t START = cheatTable[0], DIVISOR = (DIFF / cheatTable.size());
     const uint32_t OPTSIZE = LAST / DIVISOR + 1;
-    
+
+    struct optliststruct
     {
+        int pos;
+        int size;
+
+        optliststruct()
+        {
+            pos = -1;
+            size = 0;
+        }
+    };
+
+    std::vector<optliststruct> tblvec;
+
+    tblvec.reserve(OPTSIZE);
+
+    {
+        for (int i = 0; i < OPTSIZE; i++)
+        {
+            tblvec.push_back({});
+        }
+
         std::lock_guard<std::mutex> lck(printmutex);
         std::cout << std::hex << "BASE: " << cheatTable[0] << " MAX " << cheatTable[cheatTable.size() - 1] << " DIFF "
             << DIFF << "  " << DIVISOR << std::endl;
-
-        for (auto hsh : cheatTable)
-        {
-            uint32_t BASE = hsh - START;
-            std::cout << BASE << " index: " << BASE / DIVISOR << std::endl;
-        }
 
         int handle = 0;
 
         for (int i = 0, size = cheatTable.size(); i < size; i++)
         {
+            uint32_t BASE = cheatTable[i] - START;
+
+            auto &op = tblvec[BASE / DIVISOR];
+
+            if (op.pos == -1)
+            {
+                op.pos = i;
+            }
+            
+            op.size++;
+
             hashr[handle] |= cheatTable[i];
 
             if (i != 0 && i % CSIZE == 0)
@@ -186,32 +212,21 @@ void findcollisions_mthread(uint32_t hash, int length, const std::string &perm_l
                 {
                     bool findval = false;
                     
-                    auto it = cheatTable.begin();
-                    auto itend = cheatTable.begin();
-                    std::advance(itend, CSIZE);
-                    for (int hi = 0; hi < hashr.size(); hi++)
                     {
-                        if (resulthash < *it)
-                        {
-                            break;
-                        }
-                        
-                        if ((hashr[hi] & resulthash) == resulthash)
-                        {
-                            if (hi == hashr.size() - 1)
-                            {
-                                itend = cheatTable.end();
-                            }
+                        uint32_t B = resulthash - START;
+                        B /= DIVISOR;
 
-                            if (std::find(it, itend, resulthash) != itend)
+                        if (tblvec[B].pos != -1)
+                        {
+                            for (int dc = tblvec[B].pos, siz = dc + tblvec[B].size; dc < siz; dc++)
                             {
-                                findval = true;
-                                break;
+                                if (cheatTable[dc] == resulthash)
+                                {
+                                    findval = true;
+                                    break;
+                                }
                             }
                         }
-
-                        std::advance(it, CSIZE);
-                        std::advance(itend, CSIZE);
                     }
 
                     if (findval)
