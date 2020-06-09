@@ -111,11 +111,6 @@ void findcollisions_mthread(uint32_t hash, int length, const std::string &perm_l
 
     std::sort(cheatTable.begin(), cheatTable.end());
 
-    std::array<uint32_t, 8> hashr;
-    
-    std::fill(hashr.begin(), hashr.end(), 0u);
-    const int CSIZE = (cheatTable.size() + hashr.size() / 2) / hashr.size();
-
     const uint32_t LAST = cheatTable[cheatTable.size() - 1];
     const uint32_t DIFF = (LAST - cheatTable[0]);
     const uint32_t START = cheatTable[0], DIVISOR = (DIFF / cheatTable.size());
@@ -142,13 +137,7 @@ void findcollisions_mthread(uint32_t hash, int length, const std::string &perm_l
         {
             tblvec.push_back({});
         }
-
-        /*std::lock_guard<std::mutex> lck(printmutex);
-        std::cout << std::hex << "BASE: " << cheatTable[0] << " MAX " << cheatTable[cheatTable.size() - 1] << " DIFF "
-            << DIFF << "  " << DIVISOR << std::endl;*/
-
-        int handle = 0;
-
+        
         for (int i = 0, size = cheatTable.size(); i < size; i++)
         {
             uint32_t BASE = cheatTable[i] - START;
@@ -162,13 +151,6 @@ void findcollisions_mthread(uint32_t hash, int length, const std::string &perm_l
             }
             
             op.end++;
-
-            hashr[handle] |= cheatTable[i];
-
-            if (i != 0 && i % CSIZE == 0)
-            {
-                ++handle;
-            }
         }
     }
 
@@ -181,8 +163,6 @@ void findcollisions_mthread(uint32_t hash, int length, const std::string &perm_l
     {
         hashtotal |= h;
     }
-
-    //std::sort(perm_list.begin(), perm_list.end());
 
     permdata pd = assignthreadnewperm(0, 0, perm_list);
 
@@ -203,7 +183,7 @@ void findcollisions_mthread(uint32_t hash, int length, const std::string &perm_l
 
         while (true)
         {
-            uint32_t hashbase = hashbylen[imone]/*crc32FromStringLen(str, i)*/;
+            uint32_t hashbase = hashbylen[imone];
             
             for (int j = 0; j < perm_list.size(); j++)
             {
@@ -213,25 +193,22 @@ void findcollisions_mthread(uint32_t hash, int length, const std::string &perm_l
                 {
                     bool findval = false;
                     
-                    {
-                        uint32_t B = resulthash - START;
-                        B /= DIVISOR;
+                    uint32_t B = resulthash - START;
+                    B /= DIVISOR;
 
-                        if (tblvec[B].pos != -1)
+                    if (tblvec[B].pos != -1)
+                    {
+                        for (int dc = tblvec[B].pos, end = tblvec[B].end; dc != end; dc++)
                         {
-                            for (int dc = tblvec[B].pos, end = tblvec[B].end; dc != end; dc++)
+                            if (cheatTable[dc] == resulthash)
                             {
-                                if (cheatTable[dc] == resulthash)
-                                {
-                                    findval = true;
-                                    break;
-                                }
+                                findval = true;
+                                break;
                             }
                         }
                     }
 
                     if (findval)
-                    //if (resulthash == hash)
                     {
                         // complete the string
                         str[i] = perm_list[j];
