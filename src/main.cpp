@@ -66,6 +66,8 @@ public:
             reading_point = 0;
         }
 
+        elements_ready[r] = false;
+
         return std::pair<T*, bool>(&elements[r], true);
     }
 
