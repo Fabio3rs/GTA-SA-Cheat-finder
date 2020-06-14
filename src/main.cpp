@@ -14,7 +14,75 @@
 #include <cstring>
 #include "crc32.h"
 
-std::mutex printmutex;
+template<unsigned int num, class T>
+class CircleMTIO
+{
+    std::array<T, num>                          elements;
+    std::array<std::atomic<bool>, num>          elements_ready;
+
+    std::atomic<int>                            reading_point;
+    std::atomic<int>                            writing_point;
+
+public:
+    std::pair<T*, int> new_write()
+    {
+        int a = writing_point.fetch_add(1);
+
+        if (writing_point >= num)
+        {
+            writing_point = 0;
+        }
+
+        if (a >= num)
+        {
+            throw std::runtime_error("atomic operation bug ");
+        }
+
+        return std::pair<T*, int>(&elements[a], a);
+    }
+
+    std::pair<T*, bool> next()
+    {
+        int r = reading_point;
+
+        if (!elements_ready[r])
+        {
+            return std::pair<T*, bool>(nullptr, false);
+        }
+
+        if (r == writing_point)
+        {
+            return std::pair<T*, bool>(nullptr, false);
+        }
+
+        reading_point++;
+
+        if (reading_point >= num)
+        {
+            reading_point = 0;
+        }
+
+        elements_ready[r] = false;
+
+        return std::pair<T*, bool>(&elements[r], true);
+    }
+
+    void set_ready(int a)
+    {
+        elements_ready[a] = true;
+    }
+
+    CircleMTIO()
+    {
+        reading_point = 0;
+        writing_point = 0;
+
+        for (auto &b : elements_ready)
+        {
+            b = false;
+        }
+    }
+} __attribute__ ((aligned(64)));
 
 struct collision_data
 {
@@ -31,21 +99,19 @@ struct collision_data
     }
 };
 
-std::string io_buffer;
-std::vector<collision_data> io_collisions;
+CircleMTIO<256, collision_data> collisions;
 
 void register_collision(uint32_t hash, std::chrono::time_point<std::chrono::high_resolution_clock> when, uintptr_t id, const char *str, int strsize)
 {
-    std::lock_guard<std::mutex> lck(printmutex);
-    io_collisions.push_back({});
-    
-    collision_data &col = io_collisions.back();
+    auto cols = collisions.new_write();
+    collision_data &col = *cols.first;
     col.hash = hash;
     col.when = when;
     col.thread_id = id;
     int size = strsize > sizeof(col.str)? (sizeof(col.str) - 1) : strsize;
     strncpy(col.str, str, size);
     col.str[size] = 0;
+    collisions.set_ready(cols.second);
 }
 
 struct permdata
@@ -334,14 +400,13 @@ void io_thread(std::chrono::time_point<std::chrono::high_resolution_clock> start
         std::this_thread::sleep_for(std::chrono::milliseconds(1500));
         
         {
-            std::lock_guard<std::mutex> lck(printmutex);
-
-            if (io_collisions.size() > 0)
+            //if (io_collisions.size() > 0)
             {
                 buffer.clear();
 
-                for (collision_data &io : io_collisions)
+                for (auto nxt = collisions.next(); nxt.second; nxt = collisions.next())
                 {
+                    auto &io = *nxt.first;
                     temp.clear();
                     std::chrono::duration<double> diff = io.when - start;
 
@@ -369,7 +434,7 @@ void io_thread(std::chrono::time_point<std::chrono::high_resolution_clock> start
                     buffer += "\n";
                 }
 
-                io_collisions.clear();
+                //io_collisions.clear();
             }
         }
 
@@ -393,8 +458,6 @@ int main(int argc, char *argv[])
 
     iothreadShouldContinue = true;
 
-    io_collisions.reserve(64);
-
     int threads = std::thread::hardware_concurrency();
     std::vector<std::thread> thrds;
     thrds.reserve(threads);
@@ -405,7 +468,7 @@ int main(int argc, char *argv[])
     std::cout << "TIME          THREAD    HASH        STRING" << std::endl;
     for (int i = 0; i < threads; i++)
     {
-        thrds.push_back(std::thread(findcollisions_mthread, 0xDE4B237D, max_length, "ABCDEFGHIJKLMNOPQRTUVWXYZ", i + 1));
+        thrds.push_back(std::thread(findcollisions_mthread, 0xDE4B237D, max_length, "ABCDEFGHIJKLMNOPQRSTUVWXYZ", i + 1));
     }
 
     //findcollisions(0xDE4B237D, 16, "ABCDEFGHIJKLMNOPQRTUVWXYZ");
