@@ -411,13 +411,13 @@ void io_thread(std::chrono::time_point<std::chrono::high_resolution_clock> start
                     std::chrono::duration<double> diff = io.when - start;
 
                     temp += std::to_string(diff.count());
-                    temp.append(14 - temp.size(), ' ');
+                    temp.append(24 - temp.size(), ' ');
                     temp += "  #";
                     temp += std::to_string(io.thread_id);
                     temp += "  ";
                     buffer += temp;
                     
-                    buffer.append(24 - temp.size(), ' ');
+                    buffer.append(36 - temp.size(), ' ');
                     temp.clear();
 
                     sprintf(btmp, "%.8X", io.hash);
@@ -465,7 +465,7 @@ int main(int argc, char *argv[])
     auto starttime = std::chrono::high_resolution_clock::now();
     std::thread iothred(io_thread, starttime);
 
-    std::cout << "TIME          THREAD    HASH        STRING" << std::endl;
+    std::cout << "TIME                      THREAD    HASH        STRING" << std::endl;
     for (int i = 0; i < threads; i++)
     {
         thrds.push_back(std::thread(findcollisions_mthread, 0xDE4B237D, max_length, "ABCDEFGHIJKLMNOPQRSTUVWXYZ", i + 1));
