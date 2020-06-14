@@ -14,10 +14,6 @@
 #include <cstring>
 #include "crc32.h"
 
-std::mutex printmutex;
-
-class CircleWriteScope;
-
 template<unsigned int num, class T>
 class CircleMTIO
 {
@@ -30,7 +26,7 @@ class CircleMTIO
 public:
     std::pair<T*, int> new_write()
     {
-        int a = writing_point++;
+        int a = writing_point.fetch_add(1);
 
         if (writing_point >= num)
         {
@@ -86,12 +82,7 @@ public:
             b = false;
         }
     }
-};
-
-class CircleWriteScope
-{
-
-};
+} __attribute__ ((aligned(64)));
 
 struct collision_data
 {
@@ -107,8 +98,6 @@ struct collision_data
         str[0] = 0;
     }
 };
-
-std::string io_buffer;
 
 CircleMTIO<256, collision_data> collisions;
 
@@ -479,7 +468,7 @@ int main(int argc, char *argv[])
     std::cout << "TIME          THREAD    HASH        STRING" << std::endl;
     for (int i = 0; i < threads; i++)
     {
-        thrds.push_back(std::thread(findcollisions_mthread, 0xDE4B237D, max_length, "ABCDEFGHIJKLMNOPQRTUVWXYZ", i + 1));
+        thrds.push_back(std::thread(findcollisions_mthread, 0xDE4B237D, max_length, "ABCDEFGHIJKLMNOPQRSTUVWXYZ", i + 1));
     }
 
     //findcollisions(0xDE4B237D, 16, "ABCDEFGHIJKLMNOPQRTUVWXYZ");
