@@ -12,6 +12,7 @@
 #include <thread>
 #include <atomic>
 #include <cstring>
+#include <immintrin.h>
 #include "crc32.h"
 
 template<unsigned int num, class T>
@@ -248,6 +249,38 @@ constexpr c_array<optliststruct, OPTSIZE> gentblvec(const c_array<uint32_t, 87> 
     return tblvec;
 }
 
+struct m256istruct
+{
+    __m256i a;
+};
+
+template<uint32_t OPTSIZE, uint32_t START, uint32_t DIVISOR, class T>
+c_array<m256istruct, OPTSIZE> gentblsimdvec(const T &tblvec, const c_array<uint32_t, 87> &ct)
+{
+    c_array<m256istruct, OPTSIZE> result;
+
+    for (int i = 0, size = OPTSIZE; i < size; i++)
+    {
+        if (tblvec[i].pos == -1)
+        {
+            result[i].a = _mm256_set1_epi32(0);
+
+            continue;
+        }
+
+        int temp[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+
+        for (int j = tblvec[i].pos, end = tblvec[i].end, l = 0; j != end; j++, l++)
+        {
+            temp[l] = ct[j];
+        }
+
+        result[i].a = _mm256_set_epi32(temp[0], temp[1], temp[2], temp[3], temp[4], temp[5], temp[6], temp[7]);
+    }
+
+    return result;
+}
+
 void findcollisions_mthread(uint32_t hash, int length, const std::string &perm_list, uintptr_t thread_id)
 {
     if (perm_list.size() == 0)
@@ -264,6 +297,7 @@ void findcollisions_mthread(uint32_t hash, int length, const std::string &perm_l
     const uint32_t OPTSIZE = LAST / DIVISOR + 1;
 
     constexpr c_array<optliststruct, OPTSIZE> tblvec = gentblvec<OPTSIZE, START, DIVISOR>(cheatTable);
+    c_array<m256istruct, OPTSIZE> tblvecsimd = gentblsimdvec<OPTSIZE, START, DIVISOR, c_array<optliststruct, OPTSIZE>>(tblvec, cheatTable);
 
     std::array<uint32_t, 32> hashbylen;
     char str[32] = { 0 };
@@ -299,27 +333,17 @@ void findcollisions_mthread(uint32_t hash, int length, const std::string &perm_l
             for (int j = 0; j < perm_list.size(); j++)
             {
                 uint32_t resulthash = updateCrc32Char(hashbase, perm_list[j]);
+                __m256i __resulthash = _mm256_set1_epi32(static_cast<int>(resulthash));
 
-                if ((hashtotal & resulthash) == resulthash && resulthash >= cheatTable[0] && resulthash <= cheatTable[cheatTable.size() - 1])
+                if (resulthash >= cheatTable[0] && resulthash <= cheatTable[cheatTable.size() - 1])
                 {
-                    bool findval = false;
-                    
                     uint32_t B = resulthash - START;
                     B /= DIVISOR;
 
-                    if (tblvec[B].pos != -1)
-                    {
-                        for (int dc = tblvec[B].pos, end = tblvec[B].end; dc != end; dc++)
-                        {
-                            if (cheatTable[dc] == resulthash)
-                            {
-                                findval = true;
-                                break;
-                            }
-                        }
-                    }
+                    __m256i r = _mm256_cmpeq_epi32(__resulthash, tblvecsimd[B].a);
+                    int findeq = _mm256_movemask_epi8(r);
 
-                    if (findval)
+                    if (findeq != 0)
                     {
                         // complete the string
                         str[i] = perm_list[j];
