@@ -249,6 +249,16 @@ constexpr c_array<optliststruct, OPTSIZE> gentblvec(const c_array<uint32_t, 87> 
     return tblvec;
 }
 
+
+constexpr c_array<uint32_t, 87> cheatTable = cheatArray();
+
+constexpr uint32_t LAST = cheatTable[cheatTable.size() - 1];
+constexpr uint32_t DIFF = (LAST - cheatTable[0]);
+constexpr uint32_t START = cheatTable[0], DIVISOR = (DIFF / cheatTable.size());
+constexpr uint32_t OPTSIZE = LAST / DIVISOR + 1;
+
+constexpr c_array<optliststruct, OPTSIZE> tblvec = gentblvec<OPTSIZE, START, DIVISOR>(cheatTable);
+
 struct m256istruct
 {
     __m256i a;
@@ -281,6 +291,7 @@ c_array<m256istruct, OPTSIZE> gentblsimdvec(const T &tblvec, const c_array<uint3
     return result;
 }
 
+
 void findcollisions_mthread(uint32_t hash, int length, const std::string &perm_list, uintptr_t thread_id)
 {
     if (perm_list.size() == 0)
@@ -289,16 +300,8 @@ void findcollisions_mthread(uint32_t hash, int length, const std::string &perm_l
     if (length > 31)
         length = 31;
 
-    constexpr c_array<uint32_t, 87> cheatTable = cheatArray();
-
-    const uint32_t LAST = cheatTable[cheatTable.size() - 1];
-    const uint32_t DIFF = (LAST - cheatTable[0]);
-    const uint32_t START = cheatTable[0], DIVISOR = (DIFF / cheatTable.size());
-    const uint32_t OPTSIZE = LAST / DIVISOR + 1;
-
-    constexpr c_array<optliststruct, OPTSIZE> tblvec = gentblvec<OPTSIZE, START, DIVISOR>(cheatTable);
     c_array<m256istruct, OPTSIZE> tblvecsimd = gentblsimdvec<OPTSIZE, START, DIVISOR, c_array<optliststruct, OPTSIZE>>(tblvec, cheatTable);
-
+    
     std::array<uint32_t, 32> hashbylen;
     char str[32] = { 0 };
 
