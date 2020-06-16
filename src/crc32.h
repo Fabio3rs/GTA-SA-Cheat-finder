@@ -11,6 +11,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #pragma once
 #include <cstdint>
 #include <string>
+#include <immintrin.h>
+#include <iostream>
 
 static constexpr uint32_t crcTable[256] = {
 	0x00000000UL, 0x77073096UL, 0xee0e612cUL, 0x990951baUL, 0x076dc419UL,
@@ -76,12 +78,47 @@ constexpr uint32_t crc32Char(char ch)
 	return crc;
 }
 
+inline int *mm256_toi(__m256i &r)
+{
+    return (int*)(&r);
+}
+
+inline __m256i SIMDcrc32Char(const char ch[8])
+{
+	__m256i crc = _mm256_set1_epi32(0xFFFFFFFF);
+    __m256i chars =_mm256_set_epi32(ch[0], ch[1], ch[2], ch[3], ch[4], ch[5], ch[6], ch[7]);
+
+    __m256i crcshifted = _mm256_srli_epi32(crc, 8);
+    __m256i crcxor = _mm256_xor_si256(crc, chars);
+
+    __m256i pos = _mm256_and_si256(crcxor, _mm256_set1_epi32(0xFF));
+    int *i = mm256_toi(pos);
+
+    __m256i ifromtbl = _mm256_set_epi32(crcTable[i[0]], crcTable[i[1]], crcTable[i[2]], crcTable[i[3]], crcTable[i[4]], crcTable[i[5]], crcTable[i[6]], crcTable[i[7]]);
+	crc = _mm256_xor_si256(ifromtbl, crcshifted);
+	return crc;
+}
+
 uint32_t updateCrc32(uint32_t crc, const unsigned char *buf, uint32_t len);
 
 constexpr uint32_t updateCrc32Char(uint32_t crc, const char ch)
 {
 	crc = crcTable[(crc^ch) & 0xFF] ^ (crc >> 8);
 	return crc;
+}
+
+inline __m256i SIMDupdateCrc32Char(__m256i &crc, const char ch[8])
+{
+	__m256i chars =_mm256_set_epi32(ch[0], ch[1], ch[2], ch[3], ch[4], ch[5], ch[6], ch[7]);
+
+    __m256i crcshifted = _mm256_srli_epi32(crc, 8);
+    __m256i crcxor = _mm256_xor_si256(crc, chars);
+
+    __m256i pos = _mm256_and_si256(crcxor, _mm256_set1_epi32(0xFF));
+    int *i = mm256_toi(pos);
+
+    __m256i ifromtbl = _mm256_set_epi32(crcTable[i[0]], crcTable[i[1]], crcTable[i[2]], crcTable[i[3]], crcTable[i[4]], crcTable[i[5]], crcTable[i[6]], crcTable[i[7]]);
+	return _mm256_xor_si256(ifromtbl, crcshifted);;
 }
 
 uint32_t updateCrc32String(uint32_t crc, const char *buf, uint32_t len);
