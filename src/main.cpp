@@ -131,8 +131,19 @@ struct permdata
 permdata lastpdata;
 std::mutex assignpermmutx;
 
+template<class T>
+constexpr size_t round_up8(const T &a)
+{
+    size_t s = a.size() / 8;
+
+    if (a.size() % 8 != 0)
+        s++;
+    
+    return s * 8;
+}
 
 const std::string perm_list = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const std::unique_ptr<char[]> perm_list_roundup(std::make_unique<char[]>(round_up8(perm_list)));
 /*
 Each thread process all the permutations with certain length starting with some letter
 */
@@ -271,6 +282,11 @@ struct m256istruct
     }
 };
 
+inline uint32_t *pm256s_toui(m256istruct *r)
+{
+    return (uint32_t*)r;
+}
+
 template<uint32_t OPTSIZE, uint32_t START, uint32_t DIVISOR, class T, class D>
 constexpr c_array<m256istruct, OPTSIZE> gentblsimdvec(const T &tblvec, const D &ct)
 {
@@ -301,6 +317,15 @@ constexpr c_array<m256istruct, OPTSIZE> gentblsimdvec(const T &tblvec, const D &
     return result;
 }
 
+inline void hashsfill(uint32_t hs, std::array<m256istruct, 4> &ahash)
+{
+    __m256i tmp256i = _mm256_set1_epi32(hs);
+    for (int j = 0, kc = 0; j < perm_list.size(); j += 8, kc++)
+    {
+        ahash[kc].a = SIMDupdateCrc32Char(tmp256i, &perm_list_roundup[j]);
+    }
+}
+
 void findcollisions_mthread(uint32_t hash, int length, uintptr_t thread_id)
 {
     if (perm_list.size() == 0)
@@ -311,64 +336,42 @@ void findcollisions_mthread(uint32_t hash, int length, uintptr_t thread_id)
 
     const c_array<m256istruct, OPTSIZE> tblvecsimd = gentblsimdvec<OPTSIZE, START, DIVISOR, c_array<optliststruct, OPTSIZE>>(tblvec, cheatTable);
     
-    std::array<uint32_t, 32> hashbylen;
+    std::array<std::array<m256istruct, 4>, 32> hashsbylen;
+    std::array<uint8_t, 32> permlen;
+
+    std::fill(permlen.begin(), permlen.end(), 0);
+
     char str[32] = { 0 };
 
-    __m256i alphabetlhash[4];
-
     permdata pd = assignthreadnewperm(0, 0);
+
+    hashsfill(0xFFFFFFFF, hashsbylen[0]);
 
     for (int i = pd.len; i < length; /*i++*/)
     {
         i = pd.len;
+        permlen[0] = pd.perm;
 
-        memset(&str, perm_list[0], i);
-        str[0] = perm_list[pd.perm];
-        hashbylen[0] = crc32Char(perm_list[pd.perm]);
+        memset(&str, perm_list_roundup[0], i);
+        str[0] = perm_list_roundup[pd.perm];
 
         for (int j = 1; j < i; j++)
         {
-            hashbylen[j] = updateCrc32Char(hashbylen[j - 1], perm_list[0]);
+            int jm1 = j - 1;
+            hashsfill(pm256s_toui(hashsbylen[jm1].data())[permlen[jm1]], hashsbylen[j]);
         }
 
         int imone = i - 1;
 
         while (true)
         {
+            //for (int ji = 0; ji < perm_list.size(); ji++)
             {
-                __m256i tmp256i = _mm256_set1_epi32(hashbylen[imone - 1]);
-                char temp[8] = { 0 };
-                int kc = 0;
-                int kl = 0;
-                for (int j = 0; j < perm_list.size(); j++)
-                {
-                    temp[kl] = perm_list[j];
-
-                    if (kl == 7)
-                    {
-                        alphabetlhash[kc] = SIMDupdateCrc32Char(tmp256i, temp);
-                        kc++;
-                        kl = 0;
-                        std::fill(temp, temp + 8, 0);
-                    }else
-                    {
-                        kl++;
-                    }
-                }
-
-                if (kl != 0)
-                {
-                    alphabetlhash[kc] = SIMDupdateCrc32Char(tmp256i, temp);
-                }
-            }
-
-            for (int ji = 0; ji < perm_list.size(); ji++)
-            {
-                uint32_t hashbase = ((uint32_t*)alphabetlhash)[ji];
+                uint32_t hashbase = pm256s_toui(hashsbylen[imone].data())[permlen[imone]];
                 
                 for (int j = 0; j < perm_list.size(); j++)
                 {
-                    uint32_t resulthash = updateCrc32Char(hashbase, perm_list[j]);
+                    uint32_t resulthash = updateCrc32Char(hashbase, perm_list_roundup[j]);
 
                     if (resulthash >= cheatTable[0] && resulthash <= cheatTable[cheatTable.size() - 1])
                     {
@@ -382,8 +385,8 @@ void findcollisions_mthread(uint32_t hash, int length, uintptr_t thread_id)
                         if (findeq != 0)
                         {
                             // complete the string
-                            str[imone] = perm_list[ji];
-                            str[i] = perm_list[j];
+                            str[imone] = perm_list_roundup[permlen[imone]];
+                            str[i] = perm_list_roundup[j];
 
                             // Send to IO
                             auto nowtime = std::chrono::high_resolution_clock::now();
@@ -393,8 +396,6 @@ void findcollisions_mthread(uint32_t hash, int length, uintptr_t thread_id)
                 }
             }
             
-            str[imone] = perm_list[perm_list.size() - 1];
-
             bool next = false;
 
             for (int l = i - 1; l >= 0; l--)
@@ -406,24 +407,27 @@ void findcollisions_mthread(uint32_t hash, int length, uintptr_t thread_id)
                     break;
                 }
 
-                auto it = std::find(perm_list.begin(), perm_list.end(), str[l]);
+                permlen[l]++;
 
-                ++it;
-
-                if (it != perm_list.end())
+                if (permlen[l] != perm_list.size())
                 {
-                    str[l] = *it;
-                    hashbylen[l] = updateCrc32Char(hashbylen[l - 1], *it);
+                    str[l] = perm_list_roundup[permlen[l]];
 
                     int lp1 = (l + 1);
-                    memset(&str[lp1], perm_list[0], i - lp1);
-                    for (int j = lp1, im1 = i - 1; j < im1; j++)
+                    memset(&str[lp1], perm_list_roundup[0], i - lp1);
+
+                    for (int j = lp1; j < i; j++)
                     {
-                        hashbylen[j] = updateCrc32Char(hashbylen[j - 1], perm_list[0]);
+                        int jm1 = j - 1;
+                        hashsfill(pm256s_toui(hashsbylen[jm1].data())[permlen[jm1]], hashsbylen[j]);
                     }
                     
                     next = true;
                     break;
+                }
+                else
+                {
+                    permlen[l] = 0;
                 }
             }
             
@@ -565,6 +569,9 @@ int main(int argc, char *argv[])
         max_length = 7;
         std::cout << "max_length = " << max_length << std::endl;
     }
+
+    memset(perm_list_roundup.get(), 0, round_up8(perm_list));
+    memcpy(perm_list_roundup.get(), perm_list.c_str(), perm_list.size());
 
     iothreadShouldContinue = true;
 
