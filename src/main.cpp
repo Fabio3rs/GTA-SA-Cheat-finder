@@ -365,9 +365,9 @@ void findcollisions_mthread(uint32_t hash, int length, uintptr_t thread_id)
 
         while (true)
         {
-            //for (int ji = 0; ji < perm_list.size(); ji++)
+            for (int ji = 0; ji < perm_list.size(); ji++)
             {
-                uint32_t hashbase = pm256s_toui(hashsbylen[imone].data())[permlen[imone]];
+                uint32_t hashbase = pm256s_toui(hashsbylen[imone].data())[ji];
                 
                 for (int j = 0; j < perm_list.size(); j++)
                 {
@@ -385,7 +385,7 @@ void findcollisions_mthread(uint32_t hash, int length, uintptr_t thread_id)
                         if (findeq != 0)
                         {
                             // complete the string
-                            str[imone] = perm_list_roundup[permlen[imone]];
+                            str[imone] = perm_list_roundup[ji];
                             str[i] = perm_list_roundup[j];
 
                             // Send to IO
@@ -396,6 +396,8 @@ void findcollisions_mthread(uint32_t hash, int length, uintptr_t thread_id)
                 }
             }
             
+            permlen[imone] = perm_list.size() - 1;
+
             bool next = false;
 
             for (int l = i - 1; l >= 0; l--)
