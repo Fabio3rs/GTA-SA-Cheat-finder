@@ -349,7 +349,7 @@ void findcollisions_mthread(uint32_t hash, int length, uintptr_t thread_id)
                         alphabetlhash[kc] = SIMDupdateCrc32Char(tmp256i, temp);
                         kc++;
                         kl = 0;
-                        memset(temp, 0, sizeof(temp));
+                        std::fill(temp, temp + 8, 0);
                     }else
                     {
                         kl++;
