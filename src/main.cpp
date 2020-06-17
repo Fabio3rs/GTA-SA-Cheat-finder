@@ -458,8 +458,6 @@ int main(int argc, char *argv[])
 
     iothreadShouldContinue = true;
 
-    io_collisions.reserve(256);
-
     int threads = std::thread::hardware_concurrency();
     std::vector<std::thread> thrds;
     thrds.reserve(threads);
