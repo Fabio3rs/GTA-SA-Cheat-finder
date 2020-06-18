@@ -390,7 +390,7 @@ void findcollisions_mthread(uint32_t hash, int length, uintptr_t thread_id)
             {
                 uint32_t hashbase = pm256s_toui(hashsbylen[imone].data())[ji];
 
-                for (int j = 0, hj = 0; j < perm_list.size(); j++)
+                for (int j = 0; j < perm_list.size(); j++)
                 {
                     uint32_t resulthash = updateCrc32Char(hashbase, perm_list_roundup[j]);
 
