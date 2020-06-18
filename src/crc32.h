@@ -71,7 +71,7 @@ static constexpr uint32_t crcTable[256] = {
 
 uint32_t crc32(const unsigned char *buf, uint32_t len);
 
-constexpr uint32_t crc32Char(char ch)
+constexpr inline uint32_t crc32Char(char ch)
 {
 	uint32_t crc = 0xFFFFFFFF;
 	crc = crcTable[(crc^ch) & 0xFF] ^ (crc >> 8);
@@ -101,7 +101,7 @@ inline __m256i SIMDcrc32Char(const char ch[8])
 
 uint32_t updateCrc32(uint32_t crc, const unsigned char *buf, uint32_t len);
 
-constexpr uint32_t updateCrc32Char(uint32_t crc, const char ch)
+constexpr inline uint32_t updateCrc32Char(uint32_t crc, const char ch)
 {
 	crc = crcTable[(crc^ch) & 0xFF] ^ (crc >> 8);
 	return crc;

@@ -14,6 +14,8 @@
 #include <cstring>
 #include <immintrin.h>
 #include "crc32.h"
+#include <utility>
+#include <bitset>
 
 template<unsigned int num, class T>
 class CircleMTIO
@@ -90,7 +92,7 @@ struct collision_data
     uint32_t hash;
     uintptr_t thread_id;
     std::chrono::time_point<std::chrono::high_resolution_clock> when;
-    char str[128];
+    uint8_t str[100];
 
     collision_data()
     {
@@ -100,9 +102,11 @@ struct collision_data
     }
 };
 
+static_assert(sizeof(collision_data) == 128, "sizeof(collision_data) != 128");
+
 CircleMTIO<256, collision_data> collisions;
 
-void register_collision(uint32_t hash, std::chrono::time_point<std::chrono::high_resolution_clock> when, uintptr_t id, const char *str, int strsize)
+void register_collision(uint32_t hash, std::chrono::time_point<std::chrono::high_resolution_clock> when, uintptr_t id, uint8_t *pd, int strsize)
 {
     auto cols = collisions.new_write();
     collision_data &col = *cols.first;
@@ -110,8 +114,8 @@ void register_collision(uint32_t hash, std::chrono::time_point<std::chrono::high
     col.when = when;
     col.thread_id = id;
     int size = strsize > sizeof(col.str)? (sizeof(col.str) - 1) : strsize;
-    strncpy(col.str, str, size);
-    col.str[size] = 0;
+    memcpy(col.str, pd, size);
+    col.str[size] = 0xFF;
     collisions.set_ready(cols.second);
 }
 
@@ -124,7 +128,7 @@ struct permdata
         len = perm = 0;
 
         perm = -1;
-        len = 1;
+        len = 2;
     }
 };
 
@@ -272,11 +276,13 @@ constexpr uint32_t OPTSIZE = LAST / DIVISOR + 1;
 
 constexpr c_array<optliststruct, OPTSIZE> tblvec = gentblvec<OPTSIZE, START, DIVISOR>(cheatTable);
 
+__m256i min = _mm256_set1_epi32(START), max = _mm256_set1_epi32(LAST);
+
 struct m256istruct
 {
     __m256i a;
 
-    m256istruct() : a{0}
+    constexpr m256istruct() : a{0}
     {
 
     }
@@ -296,12 +302,7 @@ constexpr c_array<m256istruct, OPTSIZE> gentblsimdvec(const T &tblvec, const D &
     {
         if (tblvec[i].pos == -1)
         {
-            int *a = (int*)(&result[i].a);
-
-            for (int j = 0; j < 8; j++)
-            {
-                a[j] = 0;
-            }
+            result[i].a = _mm256_set1_epi32(0);
 
             continue;
         }
@@ -326,6 +327,31 @@ inline void hashsfill(uint32_t hs, std::array<m256istruct, 4> &ahash)
     }
 }
 
+inline std::bitset<32> hashcmp(std::array<m256istruct, 4> &ahash)
+{
+    std::bitset<32> result;
+
+    int bit = 0;
+    for (int i = 0; i < ahash.size(); i++)
+    {
+        __m256i minr = _mm256_min_epu32(ahash[i].a, max);
+        __m256i maxr = _mm256_max_epu32(ahash[i].a, min);
+        
+        __m256i minrcmp = _mm256_cmpgt_epi32(minr, max);
+        __m256i maxrcmp = _mm256_cmpgt_epi32(maxr, min);
+        
+        int bits = _mm256_movemask_epi8(minrcmp) & _mm256_movemask_epi8(maxrcmp);
+        
+        for (int valm = bit + 32; bit < valm; bit++)
+        {
+            result[bit] = (bits & 7);
+            bits >>= 8;
+        }
+    }
+
+    return result;
+}
+
 void findcollisions_mthread(uint32_t hash, int length, uintptr_t thread_id)
 {
     if (perm_list.size() == 0)
@@ -333,15 +359,13 @@ void findcollisions_mthread(uint32_t hash, int length, uintptr_t thread_id)
 
     if (length > 31)
         length = 31;
-
-    const c_array<m256istruct, OPTSIZE> tblvecsimd = gentblsimdvec<OPTSIZE, START, DIVISOR, c_array<optliststruct, OPTSIZE>>(tblvec, cheatTable);
     
+    c_array<m256istruct, OPTSIZE> tblvecsimd = gentblsimdvec<OPTSIZE, START, DIVISOR, c_array<optliststruct, OPTSIZE>>(tblvec, cheatTable);
+
     std::array<std::array<m256istruct, 4>, 32> hashsbylen;
     std::array<uint8_t, 32> permlen;
 
     std::fill(permlen.begin(), permlen.end(), 0);
-
-    char str[32] = { 0 };
 
     permdata pd = assignthreadnewperm(0, 0);
 
@@ -351,9 +375,6 @@ void findcollisions_mthread(uint32_t hash, int length, uintptr_t thread_id)
     {
         i = pd.len;
         permlen[0] = pd.perm;
-
-        memset(&str, perm_list_roundup[0], i);
-        str[0] = perm_list_roundup[pd.perm];
 
         for (int j = 1; j < i; j++)
         {
@@ -368,39 +389,38 @@ void findcollisions_mthread(uint32_t hash, int length, uintptr_t thread_id)
             for (int ji = 0; ji < perm_list.size(); ji++)
             {
                 uint32_t hashbase = pm256s_toui(hashsbylen[imone].data())[ji];
-                
-                for (int j = 0; j < perm_list.size(); j++)
+
+                for (int j = 0, hj = 0; j < perm_list.size(); j++)
                 {
                     uint32_t resulthash = updateCrc32Char(hashbase, perm_list_roundup[j]);
 
-                    if (resulthash >= cheatTable[0] && resulthash <= cheatTable[cheatTable.size() - 1])
+                    if (resulthash >= START && resulthash <= LAST)
                     {
                         __m256i __resulthash = _mm256_set1_epi32(static_cast<int>(resulthash));
                         uint32_t B = resulthash - START;
                         B /= DIVISOR;
-
+                        
                         __m256i r = _mm256_cmpeq_epi32(__resulthash, tblvecsimd[B].a);
                         int findeq = _mm256_movemask_epi8(r);
 
                         if (findeq != 0)
                         {
                             // complete the string
-                            str[imone] = perm_list_roundup[ji];
-                            str[i] = perm_list_roundup[j];
+                            permlen[imone] = ji;
+                            permlen[i] = j;
 
                             // Send to IO
                             auto nowtime = std::chrono::high_resolution_clock::now();
-                            register_collision(resulthash, nowtime, thread_id, str, i + 1);
+                            register_collision(resulthash, nowtime, thread_id, permlen.data(), i + 1);
                         }
                     }
                 }
             }
             
-            permlen[imone] = perm_list.size() - 1;
-
             bool next = false;
+            int imtw = imone - 1;
 
-            for (int l = i - 1; l >= 0; l--)
+            for (int l = imtw; l >= 0; l--)
             {
                 if (l == 0)
                 {
@@ -413,10 +433,7 @@ void findcollisions_mthread(uint32_t hash, int length, uintptr_t thread_id)
 
                 if (permlen[l] != perm_list.size())
                 {
-                    str[l] = perm_list_roundup[permlen[l]];
-
                     int lp1 = (l + 1);
-                    memset(&str[lp1], perm_list_roundup[0], i - lp1);
 
                     for (int j = lp1; j < i; j++)
                     {
@@ -544,7 +561,12 @@ void io_thread(std::chrono::time_point<std::chrono::high_resolution_clock> start
 
                     buffer.append(12 - temp.size(), ' ');
 
-                    temp = io.str;
+                    temp.clear();
+                    uint8_t *p = io.str;
+                    while (*p != 0xFF)
+                    {
+                        temp += perm_list[*p++];
+                    }
                     std::reverse(temp.begin(), temp.end());
                     buffer += temp;
                     buffer += "\n";
