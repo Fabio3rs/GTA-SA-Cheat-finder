@@ -17,14 +17,19 @@
 #include <utility>
 #include <bitset>
 
+template<class T>
+struct singlevarnofsh{
+    T a;
+} __attribute__ ((aligned(64)));
+
 template<unsigned int num, class T>
 class CircleMTIO
 {
-    std::array<T, num>                          elements;
-    std::array<std::atomic<bool>, num>          elements_ready;
+    std::array<T, num>                                          elements;
+    std::array<singlevarnofsh<std::atomic<bool>>, num>          elements_ready;
 
-    std::atomic<int>                            reading_point;
-    std::atomic<int>                            writing_point;
+    std::atomic<int>                                            reading_point;
+    std::atomic<int>                                            writing_point;
 
 public:
     std::pair<T*, int> new_write()
@@ -48,7 +53,7 @@ public:
     {
         int r = reading_point;
 
-        if (!elements_ready[r])
+        if (!elements_ready[r].a)
         {
             return std::pair<T*, bool>(nullptr, false);
         }
@@ -65,14 +70,14 @@ public:
             reading_point = 0;
         }
 
-        elements_ready[r] = false;
+        elements_ready[r].a = false;
 
         return std::pair<T*, bool>(&elements[r], true);
     }
 
     void set_ready(int a)
     {
-        elements_ready[a] = true;
+        elements_ready[a].a = true;
     }
 
     CircleMTIO()
@@ -82,7 +87,7 @@ public:
 
         for (auto &b : elements_ready)
         {
-            b = false;
+            b.a = false;
         }
     }
 } __attribute__ ((aligned(64)));
