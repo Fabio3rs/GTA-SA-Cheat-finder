@@ -71,6 +71,13 @@ static constexpr uint32_t crcTable[256] = {
 
 uint32_t crc32(const unsigned char *buf, uint32_t len);
 
+inline uint32_t mm256_extract_epi32_var_indx(__m256i vec, int i)
+{   
+    __m128i indx = _mm_cvtsi32_si128(i);
+    __m256i val  = _mm256_permutevar8x32_epi32(vec, _mm256_castsi128_si256(indx));
+    return         _mm_cvtsi128_si32(_mm256_castsi256_si128(val));
+} 
+
 constexpr inline uint32_t crc32Char(char ch)
 {
 	uint32_t crc = 0xFFFFFFFF;
@@ -83,10 +90,10 @@ inline int *mm256_toi(__m256i &r)
     return (int*)(&r);
 }
 
-inline __m256i SIMDcrc32Char(const char ch[8])
+inline __m256i SIMDcrc32Char(const uint32_t *ch)
 {
 	__m256i crc = _mm256_set1_epi32(0xFFFFFFFF);
-    __m256i chars =_mm256_set_epi32(ch[0], ch[1], ch[2], ch[3], ch[4], ch[5], ch[6], ch[7]);
+    __m256i chars = _mm256_lddqu_si256((const __m256i*)ch);
 
     __m256i crcshifted = _mm256_srli_epi32(crc, 8);
     __m256i crcxor = _mm256_xor_si256(crc, chars);
@@ -107,9 +114,9 @@ constexpr inline uint32_t updateCrc32Char(uint32_t crc, const char ch)
 	return crc;
 }
 
-inline __m256i SIMDupdateCrc32Char(__m256i &crc, const char ch[8])
+inline __m256i SIMDupdateCrc32Char(__m256i &crc, const uint32_t *ch)
 {
-	__m256i chars =_mm256_set_epi32(ch[0], ch[1], ch[2], ch[3], ch[4], ch[5], ch[6], ch[7]);
+	__m256i chars = _mm256_lddqu_si256((const __m256i*)ch);
 
     __m256i crcshifted = _mm256_srli_epi32(crc, 8);
     __m256i crcxor = _mm256_xor_si256(crc, chars);

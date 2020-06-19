@@ -111,16 +111,16 @@ static_assert(sizeof(collision_data) == 128, "sizeof(collision_data) != 128");
 
 CircleMTIO<256, collision_data> collisions;
 
-void register_collision(uint32_t hash, std::chrono::time_point<std::chrono::high_resolution_clock> when, uintptr_t id, uint8_t *pd, int strsize)
+template<class T>
+inline void register_collision(uint32_t hash, std::chrono::time_point<std::chrono::high_resolution_clock> when, uintptr_t id, const T &pd, int strsize)
 {
     auto cols = collisions.new_write();
     collision_data &col = *cols.first;
     col.hash = hash;
     col.when = when;
     col.thread_id = id;
-    int size = strsize > sizeof(col.str)? (sizeof(col.str) - 1) : strsize;
-    memcpy(col.str, pd, size);
-    col.str[size] = 0xFF;
+    std::copy(reinterpret_cast<const uint64_t*>(pd.data()) + 0, reinterpret_cast<const uint64_t*>(pd.data()) + (pd.size() + sizeof(uint64_t) / 2) / sizeof(uint64_t), reinterpret_cast<uint64_t*>(col.str));
+    col.str[strsize] = 0xFF;
     collisions.set_ready(cols.second);
 }
 
@@ -152,7 +152,7 @@ constexpr size_t round_up8(const T &a)
 }
 
 const std::string perm_list = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-const std::unique_ptr<char[]> perm_list_roundup(std::make_unique<char[]>(round_up8(perm_list)));
+const std::unique_ptr<uint32_t[]> perm_list_roundup(std::make_unique<uint32_t[]>(round_up8(perm_list)));
 /*
 Each thread process all the permutations with certain length starting with some letter
 */
@@ -397,7 +397,7 @@ void findcollisions_mthread(uint32_t hash, int length, uintptr_t thread_id)
 
                 for (int j = 0; j < perm_list.size(); j++)
                 {
-                    uint32_t resulthash = updateCrc32Char(hashbase, perm_list_roundup[j]);
+                    uint32_t resulthash = updateCrc32Char(hashbase, perm_list[j]);
 
                     if (resulthash >= START && resulthash <= LAST)
                     {
@@ -416,7 +416,7 @@ void findcollisions_mthread(uint32_t hash, int length, uintptr_t thread_id)
 
                             // Send to IO
                             auto nowtime = std::chrono::high_resolution_clock::now();
-                            register_collision(resulthash, nowtime, thread_id, permlen.data(), i + 1);
+                            register_collision(resulthash, nowtime, thread_id, permlen, i + 1);
                         }
                     }
                 }
@@ -599,8 +599,17 @@ int main(int argc, char *argv[])
         std::cout << "max_length = " << max_length << std::endl;
     }
 
-    memset(perm_list_roundup.get(), 0, round_up8(perm_list));
-    memcpy(perm_list_roundup.get(), perm_list.c_str(), perm_list.size());
+    memset(perm_list_roundup.get(), 0, round_up8(perm_list) * sizeof(perm_list_roundup[0]));
+
+    for (int i = 0; i < perm_list.size(); i++)
+    {
+        perm_list_roundup[i] = (unsigned char)(perm_list[i]);
+    }
+
+    std::reverse(perm_list_roundup.get(), perm_list_roundup.get() + 8);
+    std::reverse(perm_list_roundup.get() + 8, perm_list_roundup.get() + 16);
+    std::reverse(perm_list_roundup.get() + 16, perm_list_roundup.get() + 24);
+    std::reverse(perm_list_roundup.get() + 24, perm_list_roundup.get() + 32);
 
     iothreadShouldContinue = true;
 
