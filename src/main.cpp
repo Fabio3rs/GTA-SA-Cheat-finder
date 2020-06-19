@@ -325,10 +325,20 @@ constexpr c_array<m256istruct, OPTSIZE> gentblsimdvec(const T &tblvec, const D &
 
 inline void hashsfill(uint32_t hs, std::array<m256istruct, 4> &ahash)
 {
-    __m256i tmp256i = _mm256_set1_epi32(hs);
+    __m256i crc = _mm256_set1_epi32(hs);
+    __m256i crcshifted = _mm256_srli_epi32(crc, 8);
+    __m256i __mm256xFF = _mm256_set1_epi32(0xFF);
+
     for (int j = 0, kc = 0; j < perm_list.size(); j += 8, kc++)
     {
-        ahash[kc].a = SIMDupdateCrc32Char(tmp256i, &perm_list_roundup[j]);
+        __m256i chars = _mm256_lddqu_si256((const __m256i*)&perm_list_roundup[j]);
+        __m256i crcxor = _mm256_xor_si256(crc, chars);
+
+        __m256i pos = _mm256_and_si256(crcxor, __mm256xFF);
+        int *i = mm256_toi(pos);
+
+        __m256i ifromtbl = _mm256_set_epi32(crcTable[i[0]], crcTable[i[1]], crcTable[i[2]], crcTable[i[3]], crcTable[i[4]], crcTable[i[5]], crcTable[i[6]], crcTable[i[7]]);
+        _mm256_storeu_si256(&(ahash[kc].a), _mm256_xor_si256(ifromtbl, crcshifted));
     }
 }
 

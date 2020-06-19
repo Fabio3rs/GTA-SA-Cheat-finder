@@ -125,7 +125,7 @@ inline __m256i SIMDupdateCrc32Char(__m256i &crc, const uint32_t *ch)
     int *i = mm256_toi(pos);
 
     __m256i ifromtbl = _mm256_set_epi32(crcTable[i[0]], crcTable[i[1]], crcTable[i[2]], crcTable[i[3]], crcTable[i[4]], crcTable[i[5]], crcTable[i[6]], crcTable[i[7]]);
-	return _mm256_xor_si256(ifromtbl, crcshifted);;
+	return _mm256_xor_si256(ifromtbl, crcshifted);
 }
 
 uint32_t updateCrc32String(uint32_t crc, const char *buf, uint32_t len);
