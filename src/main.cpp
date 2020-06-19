@@ -17,6 +17,32 @@
 #include <utility>
 #include <bitset>
 
+
+template<class T, std::size_t N>
+struct c_array_str
+{
+    T arr[N];
+
+    constexpr T const& operator[](std::size_t p) const
+    { return arr[p]; }
+
+    constexpr T & operator[](std::size_t p)
+    { return arr[p]; }
+
+    constexpr T const* begin() const
+    { return arr+0; }
+    constexpr T const* end() const
+    { return arr+(N - 1); }
+
+    constexpr size_t size() const
+    {
+        return N - 1;
+    }
+};
+
+template<class T>
+struct c_array_str<T, 0> {};
+
 template<class T>
 struct singlevarnofsh{
     T a;
@@ -151,7 +177,7 @@ constexpr size_t round_up8(const T &a)
     return s * 8;
 }
 
-const std::string perm_list = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+constexpr c_array_str<char, 27> perm_list{{"ABCDEFGHIJKLMNOPQRSTUVWXYZ"}};
 const std::unique_ptr<uint32_t[]> perm_list_roundup(std::make_unique<uint32_t[]>(round_up8(perm_list)));
 /*
 Each thread process all the permutations with certain length starting with some letter
