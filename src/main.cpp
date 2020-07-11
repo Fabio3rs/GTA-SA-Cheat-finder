@@ -342,16 +342,21 @@ constexpr c_array<m256istruct, OPTSIZE> gentblsimdvec(const T &tblvec, const D &
     {
         if (tblvec[i].pos == -1)
         {
-            result[i].a = _mm256_set1_epi32(0);
+            result[i].a = _mm256_set1_epi32(-1);
 
             continue;
         }
-
+        
         int *temp = (int*)(&result[i].a);
+
+        for (int c = 0; c < 8; c++)
+        {
+            temp[c] = -1;
+        }
 
         for (int j = tblvec[i].pos, end = tblvec[i].end, l = 0; j != end; j++, l++)
         {
-            temp[l] = ct[j];
+            temp[l] = ct[j] == 0? (-1) : ct[j];
         }
     }
 
@@ -450,18 +455,21 @@ void findcollisions_mthread(uint32_t hash, int length, uintptr_t thread_id)
                 for (int j = 0; j < perm_list.size(); j++)
                 {
                     uint32_t resulthash = updateCrc32Char(hashbase, perm_list[j]);
+                    
+                    uint32_t B = resulthash - START;
+                    B /= DIVISOR;
 
-                    if (resulthash >= START && resulthash <= LAST)
+                    if (B < 128)
                     {
                         __m256i __resulthash = _mm256_set1_epi32(static_cast<int>(resulthash));
-                        uint32_t B = resulthash - START;
-                        B /= DIVISOR;
                         
                         __m256i r = _mm256_cmpeq_epi32(__resulthash, tblvecsimd[B].a);
                         int findeq = _mm256_movemask_epi8(r);
 
                         if (findeq != 0)
                         {
+                            if (resulthash == ~0)
+                                continue;
                             // complete the string
                             permlen[imone] = ji;
                             permlen[i] = j;
