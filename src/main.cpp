@@ -297,12 +297,21 @@ constexpr c_array<optliststruct, OPTSIZE> gentblvec(const c_array<uint32_t, 87> 
     return tblvec;
 }
 
+constexpr uint32_t real_divisor(const uint32_t t)
+{
+    uint32_t result = 1;
+
+    while (result < t)
+        result <<= 1;
+
+    return result;
+}
 
 constexpr c_array<uint32_t, 87> cheatTable = cheatArray();
 
 constexpr uint32_t LAST = cheatTable[cheatTable.size() - 1];
 constexpr uint32_t DIFF = (LAST - cheatTable[0]);
-constexpr uint32_t START = cheatTable[0], DIVISOR = (DIFF / cheatTable.size());
+constexpr uint32_t START = cheatTable[0], DIVISOR = real_divisor(DIFF / 128);
 constexpr uint32_t OPTSIZE = LAST / DIVISOR + 1;
 
 constexpr c_array<optliststruct, OPTSIZE> tblvec = gentblvec<OPTSIZE, START, DIVISOR>(cheatTable);
