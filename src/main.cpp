@@ -281,7 +281,7 @@ constexpr c_array<optliststruct, OPTSIZE> gentblvec(const c_array<uint32_t, 87> 
 
     for (int i = 0, size = ct.size(); i < size; i++)
     {
-        uint32_t BASE = ct[i] - START;
+        uint32_t BASE = ct[i];
 
         auto &op = tblvec[BASE / DIVISOR];
 
@@ -311,7 +311,7 @@ constexpr c_array<uint32_t, 87> cheatTable = cheatArray();
 
 constexpr uint32_t LAST = cheatTable[cheatTable.size() - 1];
 constexpr uint32_t DIFF = (LAST - cheatTable[0]);
-constexpr uint32_t START = cheatTable[0], DIVISOR = real_divisor(DIFF / 128);
+constexpr uint32_t START = cheatTable[0], DIVISOR = real_divisor(LAST / 128);
 constexpr uint32_t OPTSIZE = LAST / DIVISOR + 1;
 
 constexpr c_array<optliststruct, OPTSIZE> tblvec = gentblvec<OPTSIZE, START, DIVISOR>(cheatTable);
@@ -456,7 +456,7 @@ void findcollisions_mthread(uint32_t hash, int length, uintptr_t thread_id)
                 {
                     uint32_t resulthash = updateCrc32Char(hashbase, perm_list[j]);
                     
-                    uint32_t B = resulthash - START;
+                    uint32_t B = resulthash;
                     B /= DIVISOR;
 
                     if (B < 128)
