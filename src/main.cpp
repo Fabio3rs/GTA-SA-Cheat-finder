@@ -671,7 +671,7 @@ int main(int argc, char* argv[])
 
     if (argc > 1)
     {
-        max_length = 9;
+        max_length = 7;
         std::cout << "max_length = " << max_length << std::endl;
     }
 
