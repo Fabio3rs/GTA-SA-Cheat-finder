@@ -24,15 +24,23 @@ struct c_array_str
     T arr[N];
 
     constexpr T const& operator[](std::size_t p) const
-    { return arr[p]; }
+    {
+        return arr[p];
+    }
 
-    constexpr T & operator[](std::size_t p)
-    { return arr[p]; }
+    constexpr T& operator[](std::size_t p)
+    {
+        return arr[p];
+    }
 
     constexpr T const* begin() const
-    { return arr+0; }
+    {
+        return arr + 0;
+    }
     constexpr T const* end() const
-    { return arr+(N - 1); }
+    {
+        return arr + (N - 1);
+    }
 
     constexpr size_t size() const
     {
@@ -44,9 +52,9 @@ template<class T>
 struct c_array_str<T, 0> {};
 
 template<class T>
-struct singlevarnofsh{
+struct singlevarnofsh {
     T a;
-} __attribute__ ((aligned(64)));
+} __attribute__((aligned(64)));
 
 template<unsigned int num, class T>
 class CircleMTIO
@@ -111,12 +119,12 @@ public:
         reading_point = 0;
         writing_point = 0;
 
-        for (auto &b : elements_ready)
+        for (auto& b : elements_ready)
         {
             b.a = false;
         }
     }
-} __attribute__ ((aligned(64)));
+} __attribute__((aligned(64)));
 
 struct collision_data
 {
@@ -138,10 +146,10 @@ static_assert(sizeof(collision_data) == 128, "sizeof(collision_data) != 128");
 CircleMTIO<256, collision_data> collisions;
 
 template<class T>
-inline void register_collision(uint32_t hash, std::chrono::time_point<std::chrono::high_resolution_clock> when, uintptr_t id, const T &pd, int strsize)
+inline void register_collision(uint32_t hash, std::chrono::time_point<std::chrono::high_resolution_clock> when, uintptr_t id, const T& pd, int strsize)
 {
     auto cols = collisions.new_write();
-    collision_data &col = *cols.first;
+    collision_data& col = *cols.first;
     col.hash = hash;
     col.when = when;
     col.thread_id = id;
@@ -167,17 +175,17 @@ permdata lastpdata;
 std::mutex assignpermmutx;
 
 template<class T>
-constexpr size_t round_up8(const T &a)
+constexpr size_t round_up8(const T& a)
 {
     size_t s = a.size() / 8;
 
     if (a.size() % 8 != 0)
         s++;
-    
+
     return s * 8;
 }
 
-constexpr c_array_str<char, 27> perm_list{{"ABCDEFGHIJKLMNOPQRSTUVWXYZ"}};
+constexpr c_array_str<char, 27> perm_list{ {"ABCDEFGHIJKLMNOPQRSTUVWXYZ"} };
 const std::unique_ptr<uint32_t[]> perm_list_roundup(std::make_unique<uint32_t[]>(round_up8(perm_list)));
 /*
 Each thread process all the permutations with certain length starting with some letter
@@ -203,15 +211,23 @@ struct c_array
     T arr[N];
 
     constexpr T const& operator[](std::size_t p) const
-    { return arr[p]; }
+    {
+        return arr[p];
+    }
 
-    constexpr T & operator[](std::size_t p)
-    { return arr[p]; }
+    constexpr T& operator[](std::size_t p)
+    {
+        return arr[p];
+    }
 
     constexpr T const* begin() const
-    { return arr+0; }
+    {
+        return arr + 0;
+    }
     constexpr T const* end() const
-    { return arr+N; }
+    {
+        return arr + N;
+    }
 
     constexpr size_t size() const
     {
@@ -246,8 +262,8 @@ constexpr c_array<uint32_t, 87> cheatArray()
         0xF2AA0C1D, 0xF36345A8, 0x8990D5E1, 0xB7013B1B, 0xCAEC94EE, 0x31F0C3CC, 0xB3B3E72A, 0xC25CDBFF, 0xD5CF4EFF, 0x680416B1, 0xCF5FDA18, 0xF01286E9,
         0xA841CC0A, 0x31EA09CF, 0xE958788A, 0x02C83A7C, 0xE49C3ED4, 0x171BA8CC, 0x86988DAE, 0x2BDD2FA1, 0x00000000, 0x00000000
     */
-   
-    c_array<uint32_t, 87> result{{ 0xDE4B237D, 0xB22A28D1, 0x5A783FAE, 0xEECCEA2B, 0x42AF1E28, 0x555FC201, 0x2A845345, 0xE1EF01EA, 0x771B83FC, 0x5BF12848,
+
+    c_array<uint32_t, 87> result{ { 0xDE4B237D, 0xB22A28D1, 0x5A783FAE, 0xEECCEA2B, 0x42AF1E28, 0x555FC201, 0x2A845345, 0xE1EF01EA, 0x771B83FC, 0x5BF12848,
         0x44453A17, 0xFCFF1D08, 0xB69E8532, 0x8B828076, 0xDD6ED9E9, 0xA290FD8C, 0x3484B5A7, 0x43DB914E, 0xDBC0DD65, 0xD08A30FE, 0x37BF1B4E,
         0xB5D40866, 0xE63B0D99, 0x675B8945, 0x4987D5EE, 0x2E8F84E8, 0x1A9AA3D6, 0xE842F3BC, 0x0D5C6A4E, 0x74D4FCB1, 0xB01D13B8, 0x66516EBC, 0x4B137E45,
         0x78520E33, 0x3A577325, 0xD4966D59, 0x5FD1B49D, 0xA7613F99, 0x1792D871, 0xCBC579DF, 0x4FEDCCFF, 0x44B34866, 0x2EF877DB, 0x2781E797,
@@ -255,8 +271,8 @@ constexpr c_array<uint32_t, 87> cheatArray()
         0x70164385, 0x885D0B50, 0x151BDCB3, 0xADFA640A, 0xE57F96CE, 0x040CF761, 0xE1B33EB9, 0xFEDA77F7, 0x8CA870DD, 0x9A629401, 0xF53EF5A5,
         0xF2AA0C1D, 0xF36345A8, 0x8990D5E1, 0xB7013B1B, 0xCAEC94EE, 0x31F0C3CC, 0xB3B3E72A, 0xC25CDBFF, 0xD5CF4EFF, 0x680416B1, 0xCF5FDA18, 0xF01286E9,
         0xA841CC0A, 0x31EA09CF, 0xE958788A, 0x02C83A7C, 0xE49C3ED4, 0x171BA8CC, 0x86988DAE, 0x2BDD2FA1
-    }};
-    
+    } };
+
     // constexpr sort
     for (int i = 0; i < result.size(); i++)
     {
@@ -275,7 +291,7 @@ constexpr c_array<uint32_t, 87> cheatArray()
 }
 
 template<uint32_t OPTSIZE, uint32_t START, uint32_t DIVISOR>
-constexpr c_array<optliststruct, OPTSIZE> gentblvec(const c_array<uint32_t, 87> &ct)
+constexpr c_array<optliststruct, OPTSIZE> gentblvec(const c_array<uint32_t, 87>& ct)
 {
     c_array<optliststruct, OPTSIZE> tblvec;
 
@@ -283,14 +299,14 @@ constexpr c_array<optliststruct, OPTSIZE> gentblvec(const c_array<uint32_t, 87> 
     {
         uint32_t BASE = ct[i];
 
-        auto &op = tblvec[BASE / DIVISOR];
+        auto& op = tblvec[BASE / DIVISOR];
 
         if (op.pos == -1)
         {
             op.pos = i;
             op.end = i;
         }
-            
+
         op.end++;
     }
 
@@ -322,19 +338,19 @@ struct m256istruct
 {
     __m256i a;
 
-    constexpr m256istruct() : a{0}
+    constexpr m256istruct() : a{ 0 }
     {
 
     }
 };
 
-inline uint32_t *pm256s_toui(m256istruct *r)
+inline uint32_t* pm256s_toui(m256istruct* r)
 {
     return (uint32_t*)r;
 }
 
 template<uint32_t OPTSIZE, uint32_t START, uint32_t DIVISOR, class T, class D>
-constexpr c_array<m256istruct, OPTSIZE> gentblsimdvec(const T &tblvec, const D &ct)
+constexpr c_array<m256istruct, OPTSIZE> gentblsimdvec(const T& tblvec, const D& ct)
 {
     c_array<m256istruct, OPTSIZE> result;
 
@@ -346,8 +362,8 @@ constexpr c_array<m256istruct, OPTSIZE> gentblsimdvec(const T &tblvec, const D &
 
             continue;
         }
-        
-        int *temp = (int*)(&result[i].a);
+
+        int* temp = (int*)(&result[i].a);
 
         for (int c = 0; c < 8; c++)
         {
@@ -356,14 +372,14 @@ constexpr c_array<m256istruct, OPTSIZE> gentblsimdvec(const T &tblvec, const D &
 
         for (int j = tblvec[i].pos, end = tblvec[i].end, l = 0; j != end; j++, l++)
         {
-            temp[l] = ct[j] == 0? (-1) : ct[j];
+            temp[l] = ct[j] == 0 ? (-1) : ct[j];
         }
     }
 
     return result;
 }
 
-inline void hashsfill(uint32_t hs, std::array<m256istruct, 4> &ahash)
+inline void hashsfill(uint32_t hs, std::array<m256istruct, 4>& ahash)
 {
     __m256i crc = _mm256_set1_epi32(hs);
     __m256i crcshifted = _mm256_srli_epi32(crc, 8);
@@ -372,13 +388,13 @@ inline void hashsfill(uint32_t hs, std::array<m256istruct, 4> &ahash)
     int i[8], o[8];
     for (int j = 0, kc = 0; j < perm_list.size(); j += 8, kc++)
     {
-        __m256i chars = _mm256_lddqu_si256((const __m256i*)&perm_list_roundup[j]);
+        __m256i chars = _mm256_lddqu_si256((const __m256i*) & perm_list_roundup[j]);
         __m256i crcxor = _mm256_xor_si256(crc, chars);
 
         __m256i pos = _mm256_and_si256(crcxor, __mm256xFF);
         _mm256_storeu_si256((__m256i*)i, pos);
 
-        int l = (perm_list.size() - j) >= 8? 8 : perm_list.size() - j;
+        int l = (perm_list.size() - j) >= 8 ? 8 : perm_list.size() - j;
         for (int k = 0; k < l; k++)
         {
             o[k] = crcTable[i[7 - k]];
@@ -389,7 +405,7 @@ inline void hashsfill(uint32_t hs, std::array<m256istruct, 4> &ahash)
     }
 }
 
-inline std::bitset<32> hashcmp(std::array<m256istruct, 4> &ahash)
+inline std::bitset<32> hashcmp(std::array<m256istruct, 4>& ahash)
 {
     std::bitset<32> result;
 
@@ -398,12 +414,12 @@ inline std::bitset<32> hashcmp(std::array<m256istruct, 4> &ahash)
     {
         __m256i minr = _mm256_min_epu32(ahash[i].a, max);
         __m256i maxr = _mm256_max_epu32(ahash[i].a, min);
-        
+
         __m256i minrcmp = _mm256_cmpgt_epi32(minr, max);
         __m256i maxrcmp = _mm256_cmpgt_epi32(maxr, min);
-        
+
         int bits = _mm256_movemask_epi8(minrcmp) & _mm256_movemask_epi8(maxrcmp);
-        
+
         for (int valm = bit + 32; bit < valm; bit++)
         {
             result[bit] = (bits & 7);
@@ -414,6 +430,8 @@ inline std::bitset<32> hashcmp(std::array<m256istruct, 4> &ahash)
     return result;
 }
 
+c_array<m256istruct, OPTSIZE> tblvecsimd = gentblsimdvec<OPTSIZE, START, DIVISOR, c_array<optliststruct, OPTSIZE>>(tblvec, cheatTable);
+
 void findcollisions_mthread(uint32_t hash, int length, uintptr_t thread_id)
 {
     if (perm_list.size() == 0)
@@ -421,8 +439,6 @@ void findcollisions_mthread(uint32_t hash, int length, uintptr_t thread_id)
 
     if (length > 31)
         length = 31;
-    
-    c_array<m256istruct, OPTSIZE> tblvecsimd = gentblsimdvec<OPTSIZE, START, DIVISOR, c_array<optliststruct, OPTSIZE>>(tblvec, cheatTable);
 
     std::array<std::array<m256istruct, 4>, 32> hashsbylen;
     std::array<uint8_t, 32> permlen;
@@ -455,14 +471,14 @@ void findcollisions_mthread(uint32_t hash, int length, uintptr_t thread_id)
                 for (int j = 0; j < perm_list.size(); j++)
                 {
                     uint32_t resulthash = updateCrc32Char(hashbase, perm_list[j]);
-                    
+
                     uint32_t B = resulthash;
                     B /= DIVISOR;
 
                     if (B < 128)
                     {
                         __m256i __resulthash = _mm256_set1_epi32(static_cast<int>(resulthash));
-                        
+
                         __m256i r = _mm256_cmpeq_epi32(__resulthash, tblvecsimd[B].a);
                         int findeq = _mm256_movemask_epi8(r);
 
@@ -481,7 +497,7 @@ void findcollisions_mthread(uint32_t hash, int length, uintptr_t thread_id)
                     }
                 }
             }
-            
+
             bool next = false;
             int imtw = imone - 1;
 
@@ -505,7 +521,7 @@ void findcollisions_mthread(uint32_t hash, int length, uintptr_t thread_id)
                         int jm1 = j - 1;
                         hashsfill(pm256s_toui(hashsbylen[jm1].data())[permlen[jm1]], hashsbylen[j]);
                     }
-                    
+
                     next = true;
                     break;
                 }
@@ -514,7 +530,7 @@ void findcollisions_mthread(uint32_t hash, int length, uintptr_t thread_id)
                     permlen[l] = 0;
                 }
             }
-            
+
             if (!next)
                 break;
         }
@@ -541,7 +557,7 @@ void findcollisions(uint32_t hash, int length, std::string perm_list)
         while (true)
         {
             uint32_t hashbase = crc32FromStringLen(str, i);
-            
+
             for (int j = 0; j < perm_list.size(); j++)
             {
                 str[i] = perm_list[j];
@@ -550,7 +566,7 @@ void findcollisions(uint32_t hash, int length, std::string perm_list)
                 if (resulthash == hash)
                     std::cout << str << " 0x" << std::hex << hashbase << " 0x" << resulthash << std::endl;
             }
-            
+
             bool next = false;
 
             for (int l = i - 1; l >= 0; l--)
@@ -569,12 +585,12 @@ void findcollisions(uint32_t hash, int length, std::string perm_list)
 
                     for (int j = l + 1; j < i; j++)
                         str[j] = perm_list[0];
-                    
+
                     next = true;
                     break;
                 }
             }
-            
+
             if (!next)
                 break;
         }
@@ -596,7 +612,7 @@ void io_thread(std::chrono::time_point<std::chrono::high_resolution_clock> start
     while (iothreadShouldContinue)
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(1500));
-        
+
         {
             //if (io_collisions.size() > 0)
             {
@@ -604,7 +620,7 @@ void io_thread(std::chrono::time_point<std::chrono::high_resolution_clock> start
 
                 for (auto nxt = collisions.next(); nxt.second; nxt = collisions.next())
                 {
-                    auto &io = *nxt.first;
+                    auto& io = *nxt.first;
                     temp.clear();
                     std::chrono::duration<double> diff = io.when - start;
 
@@ -614,7 +630,7 @@ void io_thread(std::chrono::time_point<std::chrono::high_resolution_clock> start
                     temp += std::to_string(io.thread_id);
                     temp += "  ";
                     buffer += temp;
-                    
+
                     buffer.append(36 - temp.size(), ' ');
                     temp.clear();
 
@@ -627,7 +643,7 @@ void io_thread(std::chrono::time_point<std::chrono::high_resolution_clock> start
                     buffer.append(12 - temp.size(), ' ');
 
                     temp.clear();
-                    uint8_t *p = io.str;
+                    uint8_t* p = io.str;
                     while (*p != 0xFF)
                     {
                         temp += perm_list[*p++];
@@ -649,13 +665,13 @@ void io_thread(std::chrono::time_point<std::chrono::high_resolution_clock> start
     }
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     int max_length = 31;
 
     if (argc > 1)
     {
-        max_length = 7;
+        max_length = 9;
         std::cout << "max_length = " << max_length << std::endl;
     }
 
@@ -688,7 +704,7 @@ int main(int argc, char *argv[])
 
     //findcollisions(0xDE4B237D, 16, "ABCDEFGHIJKLMNOPQRTUVWXYZ");
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    for (auto &t : thrds)
+    for (auto& t : thrds)
     {
         if (t.joinable())
             t.join();
@@ -698,7 +714,7 @@ int main(int argc, char *argv[])
 
     if (iothred.joinable())
         iothred.join();
-    
+
     return 0;
 }
 
