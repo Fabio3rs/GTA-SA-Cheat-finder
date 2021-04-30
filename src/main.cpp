@@ -484,8 +484,7 @@ void findcollisions_mthread(uint32_t hash, int length, uintptr_t thread_id)
 
                         if (findeq != 0)
                         {
-                            if (resulthash == 0)
-                                continue;
+                            [[unlikely]];
                             // complete the string
                             permlen[imone] = ji;
                             permlen[i] = j;
