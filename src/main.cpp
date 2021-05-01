@@ -235,6 +235,44 @@ struct c_array
     }
 };
 
+template<std::size_t N>
+struct c_boolset
+{
+    bool arr[N];
+
+    constexpr c_boolset() : arr{ 0 }
+    {
+        for (size_t i = 0; i < N; i++)
+        {
+            arr[i] = false;
+        }
+    }
+
+    constexpr bool const& operator[](std::size_t p) const
+    {
+        return arr[p];
+    }
+
+    constexpr bool& operator[](std::size_t p)
+    {
+        return arr[p];
+    }
+
+    constexpr bool const* begin() const
+    {
+        return arr + 0;
+    }
+    constexpr bool const* end() const
+    {
+        return arr + N;
+    }
+
+    constexpr size_t size() const
+    {
+        return N;
+    }
+};
+
 template<class T>
 struct c_array<T, 0> {};
 
@@ -327,7 +365,7 @@ constexpr c_array<uint32_t, 87> cheatTable = cheatArray();
 
 constexpr uint32_t LAST = cheatTable[cheatTable.size() - 1];
 constexpr uint32_t DIFF = (LAST - cheatTable[0]);
-constexpr uint32_t START = cheatTable[0], DIVISOR = real_divisor(LAST / 128);
+constexpr uint32_t START = cheatTable[0], DIVISOR = real_divisor(LAST / 20480);
 constexpr uint32_t OPTSIZE = LAST / DIVISOR + 1;
 
 constexpr c_array<optliststruct, OPTSIZE> tblvec = gentblvec<OPTSIZE, START, DIVISOR>(cheatTable);
@@ -336,7 +374,11 @@ __m256i min = _mm256_set1_epi32(START), max = _mm256_set1_epi32(LAST);
 
 struct m256istruct
 {
-    __m256i a;
+    union
+    {
+        __m256i a;
+        uint32_t b[8];
+    };
 
     constexpr m256istruct() : a{ 0 }
     {
@@ -358,12 +400,16 @@ constexpr c_array<m256istruct, OPTSIZE> gentblsimdvec(const T& tblvec, const D& 
     {
         if (tblvec[i].pos == -1)
         {
-            result[i].a = _mm256_set1_epi32(0);
+            uint32_t* temp = result[i].b;
 
+            for (int c = 0; c < 8; c++)
+            {
+                temp[c] = 0;
+            }
             continue;
         }
 
-        int* temp = (int*)(&result[i].a);
+        uint32_t* temp = result[i].b;
 
         for (int c = 0; c < 8; c++)
         {
@@ -373,6 +419,29 @@ constexpr c_array<m256istruct, OPTSIZE> gentblsimdvec(const T& tblvec, const D& 
         for (int j = tblvec[i].pos, end = tblvec[i].end, l = 0; j != end; j++, l++)
         {
             temp[l] = ct[j];
+        }
+    }
+
+    return result;
+}
+
+template<uint32_t OPTSIZE, uint32_t START, uint32_t DIVISOR, class T, class D>
+constexpr c_boolset<OPTSIZE> gentblttable(const T& tblvec, const D& ct)
+{
+    c_boolset<OPTSIZE> result;
+
+    for (int i = 0, size = OPTSIZE; i < size; i++)
+    {
+        result[i] = false;
+
+        if (tblvec[i].pos == -1)
+        {
+            continue;
+        }
+
+        for (int j = tblvec[i].pos, end = tblvec[i].end, l = 0; j != end; j++, l++)
+        {
+            result[i] = true;
         }
     }
 
@@ -430,7 +499,8 @@ inline std::bitset<32> hashcmp(std::array<m256istruct, 4>& ahash)
     return result;
 }
 
-c_array<m256istruct, OPTSIZE> tblvecsimd = gentblsimdvec<OPTSIZE, START, DIVISOR, c_array<optliststruct, OPTSIZE>>(tblvec, cheatTable);
+constexpr c_array<m256istruct, OPTSIZE> tblvecsimd = gentblsimdvec<OPTSIZE, START, DIVISOR, c_array<optliststruct, OPTSIZE>>(tblvec, cheatTable);
+constexpr c_boolset<OPTSIZE> tblttable = gentblttable<OPTSIZE, START, DIVISOR, c_array<optliststruct, OPTSIZE>>(tblvec, cheatTable);
 
 void findcollisions_mthread(uint32_t hash, int length, uintptr_t thread_id)
 {
@@ -476,6 +546,9 @@ void findcollisions_mthread(uint32_t hash, int length, uintptr_t thread_id)
                     {
                         uint32_t B = resulthash;
                         B /= DIVISOR;
+
+                        if (!tblttable[B])
+                            continue;
 
                         __m256i __resulthash = _mm256_set1_epi32(static_cast<int>(resulthash));
 
