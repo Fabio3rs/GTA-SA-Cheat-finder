@@ -6,7 +6,7 @@ It uses all the CPU threads available (some branches perform different from othe
 
 ## Branches
 
-### main
+### master
 - commom C++ code, should be compatible with any CPU
 
 ### Constexpr_optimizations
