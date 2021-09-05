@@ -1,7 +1,21 @@
+# GTA SA Cheat Finder
+
 This program permutates the alphabet to discover CRC32 hash collisions for GTA SA Cheats.
 
-It uses all the CPU threads available.
+It uses all the CPU threads available (some branches perform different from others).
 
+## Branches
+
+### main
+- commom C++ code, should be compatible with any CPU
+
+### Constexpr_optimizations
+- testing constexpr
+
+### SIMD_Highcache
+- using AVX/AVX2 SIMD instructions manually and constexpr as much as possible
+
+## Compiling
 *TODO command line*
 
 Compile with:
