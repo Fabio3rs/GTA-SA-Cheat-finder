@@ -14,7 +14,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include <immintrin.h>
 #include <iostream>
 
-static constexpr uint32_t crcTable[256] = {
+static constexpr uint32_t  __attribute__((aligned(64))) crcTable[256] = {
 	0x00000000UL, 0x77073096UL, 0xee0e612cUL, 0x990951baUL, 0x076dc419UL,
 	0x706af48fUL, 0xe963a535UL, 0x9e6495a3UL, 0x0edb8832UL, 0x79dcb8a4UL,
 	0xe0d5e91eUL, 0x97d2d988UL, 0x09b64c2bUL, 0x7eb17cbdUL, 0xe7b82d07UL,
@@ -68,6 +68,8 @@ static constexpr uint32_t crcTable[256] = {
 	0x5d681b02UL, 0x2a6f2b94UL, 0xb40bbe37UL, 0xc30c8ea1UL, 0x5a05df1bUL,
 	0x2d02ef8dUL
 };
+
+static_assert(sizeof(crcTable) == 1024, "sizeof(crcTable) != 1024");
 
 uint32_t crc32(const unsigned char *buf, uint32_t len);
 
