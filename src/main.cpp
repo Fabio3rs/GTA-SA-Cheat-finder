@@ -105,7 +105,7 @@ struct collision_data {
 
 static_assert(sizeof(collision_data) == 128, "sizeof(collision_data) != 128");
 
-CircleMTIO<256, collision_data> collisions;
+static CircleMTIO<256, collision_data> collisions;
 
 template <class T>
 inline void register_collision(
@@ -129,9 +129,9 @@ struct permdata {
     unsigned int len{}, perm{};
 };
 
-std::atomic<unsigned int> last_permpoint;
+static std::atomic<unsigned int> last_permpoint;
 
-template <class T> constexpr size_t round_up8(const T &a) {
+template <class T> static constexpr size_t round_up8(const T &a) {
     size_t s = a.size() / 8;
 
     if (a.size() % 8 != 0)
@@ -140,14 +140,15 @@ template <class T> constexpr size_t round_up8(const T &a) {
     return s * 8;
 }
 
-constexpr c_array_str<char, 27> perm_list{{"ABCDEFGHIJKLMNOPQRSTUVWXYZ"}};
-const std::unique_ptr<uint32_t[]>
+static constexpr c_array_str<char, 27> perm_list{
+    {"ABCDEFGHIJKLMNOPQRSTUVWXYZ"}};
+static const std::unique_ptr<uint32_t[]>
     perm_list_roundup(std::make_unique<uint32_t[]>(round_up8(perm_list)));
 /*
 Each thread process all the permutations with certain length starting with some
 letter
 */
-permdata assignthreadnewperm(int len, int perm) {
+static permdata assignthreadnewperm(int len, int perm) {
     unsigned int a = last_permpoint.fetch_add(1);
 
     permdata lastpdata{a / static_cast<unsigned int>(perm_list.size()) + 2,
@@ -157,8 +158,8 @@ permdata assignthreadnewperm(int len, int perm) {
 }
 
 // https://stackoverflow.com/questions/19559808/constexpr-initialization-of-array-to-sort-contents
-template <class T, std::size_t N> struct c_array {
-    T arr[N];
+template <class T, std::size_t N> struct  alignas(alignof(__m256i)) c_array {
+    T arr[N]{};
 
     constexpr T const &operator[](std::size_t p) const { return arr[p]; }
 
@@ -198,7 +199,7 @@ struct optliststruct {
     constexpr optliststruct() : pos(-1), end(0) {}
 };
 
-constexpr c_array<uint32_t, 87> cheatArray() {
+static constexpr c_array<uint32_t, 87> cheatArray() {
     /*
     0xDE4B237D, 0xB22A28D1, 0x5A783FAE, 0xEECCEA2B, 0x42AF1E28, 0x555FC201,
     0x2A845345, 0xE1EF01EA, 0x771B83FC, 0x5BF12848, 0x44453A17, 0xFCFF1D08,
@@ -250,7 +251,7 @@ constexpr c_array<uint32_t, 87> cheatArray() {
 }
 
 template <uint32_t OPTSIZE, uint32_t START, uint32_t DIVISOR>
-constexpr c_array<optliststruct, OPTSIZE>
+static constexpr c_array<optliststruct, OPTSIZE>
 gentblvec(const c_array<uint32_t, 87> &ct) {
     c_array<optliststruct, OPTSIZE> tblvec;
 
@@ -270,7 +271,7 @@ gentblvec(const c_array<uint32_t, 87> &ct) {
     return tblvec;
 }
 
-constexpr uint32_t real_divisor(const uint32_t t) {
+static constexpr uint32_t real_divisor(const uint32_t t) {
     uint32_t result = 1;
 
     while (result < t)
@@ -284,15 +285,15 @@ constexpr static c_array<uint32_t, 87> cheatTable = cheatArray();
 constexpr static uint32_t LAST = cheatTable[cheatTable.size() - 1];
 constexpr static uint32_t DIFF = (LAST - cheatTable[0]);
 constexpr static uint32_t START = cheatTable[0],
-                          DIVISOR = real_divisor(LAST / 20480);
+                          DIVISOR = real_divisor(LAST / 40960);
 constexpr static size_t OPTSIZE = LAST / DIVISOR + 1;
 
 constexpr static c_array<optliststruct, OPTSIZE> tblvec =
     gentblvec<OPTSIZE, START, DIVISOR>(cheatTable);
 
-static __m256i min = _mm256_set1_epi32(START), max = _mm256_set1_epi32(LAST);
+static const __m256i min = _mm256_set1_epi32(START), max = _mm256_set1_epi32(LAST);
 
-struct m256istruct {
+struct alignas(alignof(__m256i)) m256istruct {
     union {
         __m256i a;
         uint32_t b[8];
@@ -301,32 +302,35 @@ struct m256istruct {
     constexpr m256istruct() : a{0} {}
 };
 
-inline uint32_t *pm256s_toui(m256istruct *r) { return (uint32_t *)r; }
+static inline uint32_t *pm256s_toui(m256istruct *r) { return (uint32_t *)r; }
 
 template <size_t OPTSIZE, uint32_t START, uint32_t DIVISOR, class T, class D>
-constexpr c_array<m256istruct, OPTSIZE> gentblsimdvec(const T &tblvec,
-                                                      const D &ct) {
-    c_array<m256istruct, OPTSIZE> result;
+static constexpr c_array<uint32_t, OPTSIZE> gentblsimdvec(const T &tblvec,
+                                                          const D &ct) {
+    c_array<uint32_t, OPTSIZE> result;
 
     for (size_t i = 0, size = OPTSIZE; i < size; i++) {
         if (tblvec[i].pos == -1) {
-            uint32_t *temp = result[i].b;
-
-            for (size_t c = 0; c < 8; c++) {
-                temp[c] = 0;
-            }
+            result[i] = 0;
             continue;
         }
-
-        uint32_t *temp = result[i].b;
-
-        for (size_t c = 0; c < 8; c++) {
-            temp[c] = 0;
+        
+        int cnt = 0;
+        for (size_t j = tblvec[i].pos, end = tblvec[i].end; j != end;
+             j++) {
+            if (ct[j] != 0) {
+                result[i] = ct[j];
+                cnt++;
+            }
         }
 
-        for (size_t j = tblvec[i].pos, end = tblvec[i].end, l = 0; j != end;
-             j++, l++) {
-            temp[l] = ct[j];
+        if (cnt > 1) {
+            std::cout << "cnt > 1" << std::endl;
+
+            for (size_t j = tblvec[i].pos, end = tblvec[i].end; j != end; j++) {
+                std::cout << std::hex << ct[j] << std::dec << " ";
+            }
+            std::cout << std::endl;
         }
     }
 
@@ -334,7 +338,7 @@ constexpr c_array<m256istruct, OPTSIZE> gentblsimdvec(const T &tblvec,
 }
 
 template <size_t OPTSIZE, uint32_t START, uint32_t DIVISOR, class T, class D>
-constexpr c_boolset<OPTSIZE> gentblttable(const T &tblvec, const D &ct) {
+static constexpr c_boolset<OPTSIZE> gentblttable(const T &tblvec, const D &ct) {
     c_boolset<OPTSIZE> result;
 
     for (size_t i = 0, size = OPTSIZE; i < size; i++) {
@@ -353,7 +357,7 @@ constexpr c_boolset<OPTSIZE> gentblttable(const T &tblvec, const D &ct) {
     return result;
 }
 
-inline void hashsfill(uint32_t hs, std::array<m256istruct, 4> &ahash) {
+static inline void hashsfill(uint32_t hs, std::array<m256istruct, 4> &ahash) {
     __m256i crc = _mm256_set1_epi32(hs);
     __m256i crcshifted = _mm256_srli_epi32(crc, 8);
     __m256i __mm256xFF = _mm256_set1_epi32(0xFF);
@@ -378,7 +382,7 @@ inline void hashsfill(uint32_t hs, std::array<m256istruct, 4> &ahash) {
     }
 }
 
-inline std::bitset<32> hashcmp(std::array<m256istruct, 4> &ahash) {
+static inline std::bitset<32> hashcmp(std::array<m256istruct, 4> &ahash) {
     std::bitset<32> result;
 
     int bit = 0;
@@ -401,14 +405,15 @@ inline std::bitset<32> hashcmp(std::array<m256istruct, 4> &ahash) {
     return result;
 }
 
-static c_array<m256istruct, OPTSIZE> tblvecsimd =
+constexpr static c_array<uint32_t, OPTSIZE> tblvecsimd =
     gentblsimdvec<OPTSIZE, START, DIVISOR, c_array<optliststruct, OPTSIZE>>(
         tblvec, cheatTable);
 constexpr static c_boolset<OPTSIZE> tblttable =
     gentblttable<OPTSIZE, START, DIVISOR, c_array<optliststruct, OPTSIZE>>(
         tblvec, cheatTable);
 
-void findcollisions_mthread(uint32_t hash, size_t length, uintptr_t thread_id) {
+static void findcollisions_mthread(uint32_t hash, size_t length,
+                                   uintptr_t thread_id) {
     if (perm_list.size() == 0)
         return;
 
@@ -451,14 +456,7 @@ void findcollisions_mthread(uint32_t hash, size_t length, uintptr_t thread_id) {
                         if (!tblttable[B])
                             continue;
 
-                        __m256i __resulthash =
-                            _mm256_set1_epi32(static_cast<int>(resulthash));
-
-                        __m256i r =
-                            _mm256_cmpeq_epi32(__resulthash, tblvecsimd[B].a);
-                        int findeq = _mm256_movemask_epi8(r);
-
-                        if (findeq != 0) {
+                        if (tblvecsimd[B] == resulthash) {
                             [[unlikely]];
                             // complete the string
                             permlen[imone] = ji;
@@ -509,7 +507,8 @@ void findcollisions_mthread(uint32_t hash, size_t length, uintptr_t thread_id) {
     }
 }
 
-void findcollisions(uint32_t hash, size_t length, std::string perm_list) {
+static void findcollisions(uint32_t hash, size_t length,
+                           std::string perm_list) {
     if (perm_list.size() == 0)
         return;
 
@@ -564,8 +563,8 @@ void findcollisions(uint32_t hash, size_t length, std::string perm_list) {
 static std::atomic<bool> iothreadShouldContinue;
 
 /**/
-void io_thread(
-    std::chrono::time_point<std::chrono::high_resolution_clock> start) {
+static void
+io_thread(std::chrono::time_point<std::chrono::high_resolution_clock> start) {
     std::string buffer;
     std::string temp;
     temp.reserve(64);
