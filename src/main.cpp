@@ -161,12 +161,17 @@ static permdata assignthreadnewperm(int len, int perm) {
 template <class T, std::size_t N> struct alignas(alignof(__m256i)) c_array {
     T arr[N]{};
 
-    constexpr T const &operator[](std::size_t p) const { return arr[p]; }
+    constexpr const T* data() const { return arr; }
+    constexpr T* data() { return arr; }
 
+    constexpr const T &operator[](std::size_t p) const { return arr[p]; }
     constexpr T &operator[](std::size_t p) { return arr[p]; }
 
     constexpr T const *begin() const { return arr + 0; }
     constexpr T const *end() const { return arr + N; }
+
+    constexpr T *begin() { return arr + 0; }
+    constexpr T *end() { return arr + N; }
 
     constexpr size_t size() const { return N; }
 };
@@ -357,7 +362,7 @@ static constexpr c_boolset<OPTSIZE> gentblttable(const T &tblvec, const D &ct) {
     return result;
 }
 
-static inline void hashsfill(uint32_t hs, std::array<m256istruct, 4> &ahash) {
+static inline void hashsfill(uint32_t hs, c_array<m256istruct, 4> &ahash) {
     __m256i crc = _mm256_set1_epi32(hs);
     __m256i crcshifted = _mm256_srli_epi32(crc, 8);
     __m256i __mm256xFF = _mm256_set1_epi32(0xFF);
@@ -420,7 +425,7 @@ static void findcollisions_mthread(uint32_t hash, size_t length,
     if (length > 31)
         length = 31;
 
-    std::array<std::array<m256istruct, 4>, 32> hashsbylen;
+    c_array<c_array<m256istruct, 4>, 32> hashsbylen;
     std::array<uint8_t, 32> permlen;
 
     std::fill(permlen.begin(), permlen.end(), 0);
