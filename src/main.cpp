@@ -158,7 +158,7 @@ static permdata assignthreadnewperm(int len, int perm) {
 }
 
 // https://stackoverflow.com/questions/19559808/constexpr-initialization-of-array-to-sort-contents
-template <class T, std::size_t N> struct  alignas(alignof(__m256i)) c_array {
+template <class T, std::size_t N> struct alignas(alignof(__m256i)) c_array {
     T arr[N]{};
 
     constexpr T const &operator[](std::size_t p) const { return arr[p]; }
@@ -291,7 +291,8 @@ constexpr static size_t OPTSIZE = LAST / DIVISOR + 1;
 constexpr static c_array<optliststruct, OPTSIZE> tblvec =
     gentblvec<OPTSIZE, START, DIVISOR>(cheatTable);
 
-static const __m256i min = _mm256_set1_epi32(START), max = _mm256_set1_epi32(LAST);
+static const __m256i min = _mm256_set1_epi32(START),
+                     max = _mm256_set1_epi32(LAST);
 
 struct alignas(alignof(__m256i)) m256istruct {
     union {
@@ -314,10 +315,9 @@ static constexpr c_array<uint32_t, OPTSIZE> gentblsimdvec(const T &tblvec,
             result[i] = 0;
             continue;
         }
-        
+
         int cnt = 0;
-        for (size_t j = tblvec[i].pos, end = tblvec[i].end; j != end;
-             j++) {
+        for (size_t j = tblvec[i].pos, end = tblvec[i].end; j != end; j++) {
             if (ct[j] != 0) {
                 result[i] = ct[j];
                 cnt++;
@@ -570,10 +570,13 @@ io_thread(std::chrono::time_point<std::chrono::high_resolution_clock> start) {
     temp.reserve(64);
     buffer.reserve(2048);
 
+    unsigned int iotimer =
+        std::min(16800 / std::thread::hardware_concurrency(), 1400u);
+
     char btmp[32] = {0};
 
     while (iothreadShouldContinue) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+        std::this_thread::sleep_for(std::chrono::milliseconds(iotimer));
 
         {
             // if (io_collisions.size() > 0)
