@@ -31,40 +31,52 @@ template <class T, std::size_t N> struct c_array_str {
 };
 
 template <class T> struct c_array_str<T, 0> {};
+template <class T> struct __attribute__((aligned(64))) singlevarnofsh { T a; };
 
-template <class T> struct singlevarnofsh { T a; } __attribute__((aligned(64)));
-
-template <size_t num, class T> class CircleMTIO {
+template <size_t num, class T> class __attribute__((aligned(64))) CircleMTIO {
     std::array<T, num> elements;
-    std::array<singlevarnofsh<std::atomic<bool>>, num> elements_ready;
+    std::array<singlevarnofsh<std::atomic<int>>, num> elements_state;
 
-    std::atomic<size_t> reading_point;
-    std::atomic<size_t> writing_point;
+    std::atomic<size_t> reading_point{0};
+    std::atomic<size_t> writing_point{0};
+    // std::atomic<size_t> read_point;
+    std::mutex mtx;
 
   public:
-    std::pair<T *, size_t> new_write() {
+    using value_type = T;
+    using pair_t = std::pair<value_type, size_t>;
+
+    auto new_write() -> std::pair<T *, size_t> {
         size_t a = writing_point.fetch_add(1);
 
-        if (writing_point >= num) {
-            writing_point = 0;
+        if (a >= num) {
+            std::lock_guard<std::mutex> lck(mtx);
+            a = writing_point.fetch_add(1);
+
+            if (a >= num) {
+                a = 0;
+                writing_point = 1;
+            }
         }
 
-        if (a >= num) {
-            // throw std::runtime_error("atomic operation bug ");
+        if (elements_state[a].a != 0) {
+            return std::pair<T *, size_t>(nullptr, 0);
         }
+
+        elements_state[a].a = 1;
 
         return std::pair<T *, size_t>(&elements[a], a);
     }
 
-    std::pair<T *, bool> next() {
+    auto next() -> std::pair<T *, size_t> {
         size_t r = reading_point;
 
-        if (!elements_ready[r].a) {
-            return std::pair<T *, bool>(nullptr, false);
+        if (elements_state[r].a != 2) {
+            return std::pair<T *, size_t>(nullptr, ~std::size_t(0));
         }
 
         if (r == writing_point) {
-            return std::pair<T *, bool>(nullptr, false);
+            return std::pair<T *, size_t>(nullptr, ~std::size_t(0));
         }
 
         reading_point++;
@@ -73,22 +85,28 @@ template <size_t num, class T> class CircleMTIO {
             reading_point = 0;
         }
 
-        elements_ready[r].a = false;
+        // read_point = r;
 
-        return std::pair<T *, bool>(&elements[r], true);
+        return std::pair<T *, size_t>(&elements[r], r);
     }
 
-    void set_ready(size_t a) { elements_ready[a].a = true; }
+    void set_free(size_t a) {
+        elements_state[a].a = 0;
+        // read_point = ~std::size_t(0);
+    }
+
+    void set_ready(size_t a) { elements_state[a].a = 2; }
 
     CircleMTIO() {
         reading_point = 0;
         writing_point = 0;
+        // read_point = ~std::size_t(0);
 
-        for (auto &b : elements_ready) {
-            b.a = false;
+        for (auto &b : elements_state) {
+            b.a = 0;
         }
     }
-} __attribute__((aligned(64)));
+};
 
 struct collision_data {
     uint32_t hash;
@@ -113,13 +131,16 @@ inline void register_collision(
     std::chrono::time_point<std::chrono::high_resolution_clock> when,
     uintptr_t id, const T &pd, int strsize) {
     auto cols = collisions.new_write();
+
+    while (cols.first == nullptr) cols = collisions.new_write();
+
     collision_data &col = *cols.first;
     col.hash = hash;
     col.when = when;
     col.thread_id = id;
     std::copy(reinterpret_cast<const uint64_t *>(pd.data()) + 0,
               reinterpret_cast<const uint64_t *>(pd.data()) +
-                  (pd.size() + sizeof(uint64_t) / 2) / sizeof(uint64_t),
+                  (pd.size()) / sizeof(uint64_t),
               reinterpret_cast<uint64_t *>(col.str));
     col.str[strsize] = 0xFF;
     collisions.set_ready(cols.second);
@@ -161,8 +182,8 @@ static permdata assignthreadnewperm(int len, int perm) {
 template <class T, std::size_t N> struct alignas(alignof(__m256i)) c_array {
     T arr[N]{};
 
-    constexpr const T* data() const { return arr; }
-    constexpr T* data() { return arr; }
+    constexpr const T *data() const { return arr; }
+    constexpr T *data() { return arr; }
 
     constexpr const T &operator[](std::size_t p) const { return arr[p]; }
     constexpr T &operator[](std::size_t p) { return arr[p]; }
@@ -576,8 +597,7 @@ io_thread(std::chrono::time_point<std::chrono::high_resolution_clock> start) {
     buffer.reserve(2048);
 
     unsigned int iotimer =
-        std::min(16800 / std::thread::hardware_concurrency(), 1400u);
-
+        std::min(15000 / std::thread::hardware_concurrency(), 1400u);
     char btmp[32] = {0};
 
     while (iothreadShouldContinue) {
@@ -588,9 +608,10 @@ io_thread(std::chrono::time_point<std::chrono::high_resolution_clock> start) {
             {
                 buffer.clear();
 
-                for (auto nxt = collisions.next(); nxt.second;
+                for (auto nxt = collisions.next(); nxt.first != nullptr;
                      nxt = collisions.next()) {
-                    auto &io = *nxt.first;
+                    auto io = *nxt.first;
+                    collisions.set_free(nxt.second);
                     temp.clear();
                     std::chrono::duration<double> diff = io.when - start;
 
@@ -629,6 +650,7 @@ io_thread(std::chrono::time_point<std::chrono::high_resolution_clock> start) {
         if (buffer.size() > 0) {
             std::cout << buffer;
             buffer.clear();
+            std::cout.flush();
         }
     }
 }
@@ -641,6 +663,8 @@ int main(int argc, char *argv[]) {
         std::cout << "max_length = " << max_length << std::endl;
     }
 
+    iothreadShouldContinue = true;
+
     memset(perm_list_roundup.get(), 0,
            round_up8(perm_list) * sizeof(perm_list_roundup[0]));
 
@@ -652,8 +676,6 @@ int main(int argc, char *argv[]) {
     std::reverse(perm_list_roundup.get() + 8, perm_list_roundup.get() + 16);
     std::reverse(perm_list_roundup.get() + 16, perm_list_roundup.get() + 24);
     std::reverse(perm_list_roundup.get() + 24, perm_list_roundup.get() + 32);
-
-    iothreadShouldContinue = true;
 
     int threads = std::thread::hardware_concurrency();
     std::vector<std::thread> thrds;
